@@ -13,6 +13,8 @@ Base = declarative_base()
 
 class FileCommit(Base):
     __tablename__ = 'file_commit'
+    __table_args__ = (UniqueConstraint('user_id', 'path'),)
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     path = Column(String(1024), nullable=False)
@@ -23,6 +25,7 @@ class FileCommit(Base):
 
 class FileContent(Base):
     __tablename__ = 'file_content'
+
     id = Column(Integer, primary_key=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True, unique=True)
     content_type = Column(String(40), nullable=True)
@@ -31,6 +34,7 @@ class FileContent(Base):
 
 class User(Base):
     __tablename__ = 'user'
+
     id = Column(Integer, primary_key=True)
     login = Column(String(80), nullable=False, index=True, unique=True)
     fullname = Column(String(80))
