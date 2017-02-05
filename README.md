@@ -1,8 +1,9 @@
 # Assignment Dashboard
 
-Dispaly the forks of files in a GitHub repository (currently hardwired to `sd17spring/ReadingJournal`), in a web
-browser, in tabular format.
+A web app that displays the forks of files in a GitHub repository (currently hardwired to `sd17spring/ReadingJournal`),
+in tabular format.
 
+![](./docs/screenshot.png)
 
 ## Status
 
