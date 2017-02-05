@@ -1,8 +1,7 @@
-import sqlalchemy.types as types
 from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey,
                         Integer, String, Text, UniqueConstraint, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker
 
 DATABASE_URL = 'sqlite:///database.db'
 
