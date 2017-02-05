@@ -5,11 +5,12 @@ in tabular format.
 
 ![](./docs/screenshot.png)
 
+
 ## Status
 
 It works for me :-)
 
-The next major steps are to deploy to Heroku, and to hide it behind OAuth so it's safe on the open wave Heroku.
+The next major steps are to deploy to Heroku – but first, to hide requests behind OAuth so it's safe on the open wweb.
 
 (This doesn't technically reveal FERPA information or anything that's not already discoverable; but it promotes
 the information too high for my taste.)
@@ -43,7 +44,10 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ## Usage
 
-### Updte the database
+The code has two components. The updater updates the project database from GitHub.
+The web application browses the data in this database.
+
+### Update the database
 
     $ python update_database.py
 
@@ -51,14 +55,22 @@ This picks up new commits.
 
 ### Run the Web App
 
+Launch Flask:
+
     $ python3 server.py
 
 Then browse to <http://localhost:4000>.
 
+File bugs and enhancement requests [here](https://github.com/osteele/assignment-dashboard/issues).
+
 
 ## Contributing
 
-## Style
+### What to Work On
+
+The [GitHub issues](https://github.com/osteele/assignment-dashboard/issues) lists bugs and enhancement requests.
+
+### Style
 
 With exceptions listed in `setup.cfg`, code should conform to [PEP8](https://www.python.org/dev/peps/pep-0008/), [PEP257](https://www.python.org/dev/peps/pep-0257/), and the [Google Python Style Guide](http://google.github.io/styleguide/pyguide.html).
 
