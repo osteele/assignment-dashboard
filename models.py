@@ -23,6 +23,9 @@ class FileCommit(Base):
 
     file_content = relationship('FileContent')
 
+    def __repr__(self):
+        return "<FileCommit %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'])
+
 
 class FileContent(Base):
     __tablename__ = 'file_content'
@@ -43,9 +46,13 @@ class User(Base):
 
     # file_commits = relationship('FileCommit', backref='user')
 
+    def __repr__(self):
+        return "<User %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'login', 'role'])
+
 
 class Repo(Base):
     __tablename__ = 'repo'
+    __table_args__ = (UniqueConstraint('owner_id', 'name'),)
 
     id = Column(Integer, primary_key=True)
     owner_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -54,7 +61,11 @@ class Repo(Base):
     refreshed_at = Column(DateTime)
 
     source = relationship('Repo', remote_side=[id])
+    forks = relationship('Repo')
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
+
+    def __repr__(self):
+        return "<Repo %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'])
 
 
 class Commit(Base):

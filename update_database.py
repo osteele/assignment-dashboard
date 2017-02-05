@@ -7,10 +7,11 @@ from github import Github
 from sqlalchemy.sql.expression import func
 
 from models import Commit, FileCommit, FileContent, Repo, Session, User
-from utils import upsert
+from utils import find_or_create, upsert
 
 # Globals
 #
+
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 if not GITHUB_API_TOKEN:
@@ -38,7 +39,7 @@ student_repos = sorted((repo for repo in source_repo.get_forks()
 all_repos = [source_repo] + student_repos
 
 
-# insert students and repos
+# students
 #
 
 print('updating students')
@@ -50,12 +51,23 @@ session.commit()
 user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in all_repos])))
 user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
 
+
+# repos
+#
+
+def instance_for_repo(repo):
+    owner = user_instance_map[repo.owner.login]
+    return repo_instance_map[owner.id, repo.name]
+
 print('updating repos')
-source_repo_instance = Repo(owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
-repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source=source_repo_instance)
+source_repo_instance = find_or_create(session, Repo, owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
+session.commit()
+assert source_repo_instance.id
+
+repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
                   for repo in all_repos
                   if repo != source_repo]
-upsert(session, repo_instances, Repo.owner_id, Repo.name)
+upsert(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
 session.commit()
 
 repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
@@ -88,7 +100,7 @@ db_file_contents = dict(session.query(FileContent.sha, func.length(FileContent.c
 file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) if is_downloadable(item) else None)
                  for repo, item in file_hashes.values()
                  if item.sha not in db_file_contents or is_downloadable(item) and db_file_contents[item.sha] is None]
-print('downloaded %d files' % sum(fc.content for fc in file_contents))
+print('downloaded %d files' % sum(bool(fc.content) for fc in file_contents))
 
 upsert(session, file_contents, FileContent.sha)
 session.commit()  # TODO remove this; commit with next transaction
@@ -100,11 +112,6 @@ session.commit()  # TODO remove this; commit with next transaction
 
 def parse_git_datetime(s):
     return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
-
-
-def instance_for_repo(repo):
-    owner = user_instance_map[repo.owner.login]
-    return repo_instance_map[owner.id, repo.name]
 
 
 logged_commit_shas = {sha for sha, in session.query(Commit.sha)}  # TODO restrict to fetched timespan
