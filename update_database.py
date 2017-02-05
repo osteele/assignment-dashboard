@@ -37,20 +37,37 @@ all_repos = [source_repo] + student_repos
 # insert students
 #
 
-def upsert(instances, keyname):
+def upsert(session, instances, *keys):
+    """Merge or add instances to the session.
+
+    Instance are merged if the database contains a row with the same values for keys.
+    """
+    MAX_ROWS = 200
     if not instances:
         return
+    if len(instances) > MAX_ROWS:
+        upsert(session, instances[:MAX_ROWS], *keys)
+        upsert(session, instances[MAX_ROWS:], *keys)
+        return
     klass = instances[0].__class__
-    instance_map = {getattr(instance, keyname): instance for instance in instances}
-    for key, id in session.query(getattr(klass, keyname), klass.id).filter(getattr(klass, keyname).in_(instance_map.keys())):
+    instance_map = {tuple(getattr(instance, key) for key in keys): instance
+                    for instance in instances}
+    rows = session.query(klass.id, *(getattr(klass, key) for key in keys))
+    for i, key in enumerate(keys):
+        rows = rows.filter(getattr(klass, key).in_({k[i] for k in instance_map.keys()}))
+    for id, *keys_values in rows:
+        key = tuple(keys_values)
+        if key not in instance_map:
+            continue
         instance = instance_map.pop(key)
         instance.id = id
         session.merge(instance)
+    print('%s: updated %d records; added %d records' % (klass.__name__, len(instances) - len(instance_map), len(instance_map)))
     session.add_all(instance_map.values())
 
 students = [User(login=repo.owner.login, fullname=repo.owner.name, role='organization' if repo == source_repo else 'student')
             for repo in all_repos]
-upsert(students, 'login')
+upsert(session, students, 'login')
 session.commit()
 
 
@@ -64,35 +81,12 @@ file_hashes = {item.sha: (repo, item)
 
 file_contents = [FileContent(sha=item.sha, content='') for repo, item in file_hashes.values()]
 
-upsert(file_contents, 'sha')
+upsert(session, file_contents, 'sha')
 session.commit()  # TODO remove this; commit with next transaction
 
 
 # insert file commits
 #
-
-# TODO consolidate this with `upsert`, above
-def upsert2(instances, key1, key2):
-    MAX_ROWS = 200
-    if not instances:
-        return
-    if len(instances) > MAX_ROWS:
-        upsert2(instances[:MAX_ROWS], key1, key2)
-        upsert2(instances[MAX_ROWS:], key1, key2)
-        return
-    klass = instances[0].__class__
-    instance_map = {(getattr(instance, key1), getattr(instance, key2)): instance for instance in instances}
-    rows = session.query(klass.id, getattr(klass, key1), getattr(klass, key2))
-    rows = rows.filter(getattr(klass, key1).in_([k[0] for k in instance_map.keys()]))
-    rows = rows.filter(getattr(klass, key2).in_([k[1] for k in instance_map.keys()]))
-    for id, *keys in rows:
-        if tuple(keys) not in instance_map:
-            continue
-        instance = instance_map.pop(tuple(keys))
-        instance.id = id
-        session.merge(instance)
-    print('%s: updated %d records; added %d records' % (klass.__name__, len(instances) - len(instance_map), len(instance_map)))
-    session.add_all(instance_map.values())
 
 
 def parse_git_datetime(s):
@@ -116,5 +110,5 @@ user_instance_map = {instance.login: instance for instance in user_instances}  #
 file_commits = [FileCommit(user_id=user_instance_map[login].id, path=path, mod_time=mod_time, sha=sha)
                 for (login, path), (sha, mod_time) in file_commit_recs.items()]
 
-upsert2(file_commits, 'user_id', 'path')
+upsert(session, file_commits, 'user_id', 'path')
 session.commit()
