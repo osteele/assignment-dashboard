@@ -57,6 +57,16 @@ class Repo(Base):
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
 
 
+class Commit(Base):
+    __tablename__ = 'commit'
+    __table_args__ = (UniqueConstraint('repo_id', 'sha'),)
+
+    id = Column(Integer, primary_key=True)
+    repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
+    sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
+    commit_date = Column(DateTime, nullable=False)
+
+
 engine = create_engine(DATABASE_URL)
 
 Session = sessionmaker(bind=engine)

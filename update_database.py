@@ -5,7 +5,7 @@ import sys
 import arrow
 from github import Github
 
-from models import FileCommit, FileContent, Repo, Session, User
+from models import Commit, FileCommit, FileContent, Repo, Session, User
 from utils import upsert
 
 # Globals
@@ -33,7 +33,7 @@ print('fetching repos')
 source_repo = gh.get_repo(source_repo_name)
 student_repos = sorted((repo for repo in source_repo.get_forks()
                         if repo.owner.login not in instructor_logins),
-                       key=lambda repo: repo.owner.login.lower())[:1]
+                       key=lambda repo: repo.owner.login.lower())
 all_repos = [source_repo] + student_repos
 
 
@@ -106,23 +106,34 @@ def instance_for_repo(repo):
     return repo_instance_map[owner.id, repo.name]
 
 
-print('updating file commits')
+logged_commit_shas = {sha for sha, in session.query(Commit.sha)}  # TODO restrict to fetched timespan
+print('fetching commits')
 
 repo_commits = [(repo, commit)
                 for repo in all_repos
-                for commit in repo.get_commits()]
-len(repo_commits)
+                for commit in repo.get_commits()
+                if commit.sha not in logged_commit_shas]
+print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
 
 # Use a dict, to record only the latest commit for each file
 file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
                     for repo, commit in reversed(repo_commits)
                     if repo == source_repo or (commit.author == repo.owner and len(commit.parents) == 1)
                     for item in commit.files}
-len(file_commit_recs)
+print('processing %d file commits' % len(file_commit_recs))
 
 
 file_commits = [FileCommit(repo_id=repo_id, path=path, mod_time=mod_time, sha=sha)
                 for (repo_id, path), (sha, mod_time) in file_commit_recs.items()]
 
 upsert(session, file_commits, FileCommit.repo_id, FileCommit.path)
+session.commit()
+
+
+# update repo commits
+#
+
+commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
+                    for repo, commit in repo_commits]
+upsert(session, commit_instances, Commit.repo_id, Commit.sha)
 session.commit()
