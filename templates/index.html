@@ -1,17 +1,31 @@
-<table>
-  <tr>
-    <th></th>
-    {% for name in assignment_names %}
-      <th>{{ name }}</th>
-    {% endfor %}
-  </tr>
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      th { text-align: left; }
+      td { padding-right: 20px; }
+      td { color: green; }
+      td.missing { color: red; }
+    </style>
+  </head>
 
-  {% for row in rows %}
-    <tr>
-      <th>{{ row.fullname or row.login }}</th>
-      {% for col_key in col_keys %}
-        <td>{{ row.status[col_key] }}</td>
+  <body>
+    <table>
+      <tr>
+        <th></th>
+        {% for name in assignment_names %}
+          <th>{{ name }}</th>
+        {% endfor %}
+      </tr>
+
+      {% for row in rows %}
+        <tr>
+          <th>{{ row.fullname or row.login }}</th>
+          {% for col_key in col_keys %}
+            <td class="{{ row.status[col_key] }}">{{ row.status[col_key] }}</td>
+          {% endfor %}
+        </tr>
       {% endfor %}
-    </tr>
-  {% endfor %}
-</table>
+    </table>
+  </body>
+  </html>
