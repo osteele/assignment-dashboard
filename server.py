@@ -17,6 +17,7 @@ fork_dict = {fork.owner_id: fork for fork in source_repo.forks}  # FIXME abuse o
 users = session.query(User).all()
 
 assignment_files = sorted({file.path for file in source_repo.files if file.path.endswith('.ipynb')})
+assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_files]
 
 files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_files)).options(joinedload(FileCommit.repo)).all()
 user_path_files = {(file.repo.owner_id, file.path): file for file in files}
@@ -34,7 +35,7 @@ def home_page():
     rows = sorted((dict(login=login, fullname=fullname, status=val)
                    for (login, fullname), val in user_cells.items()),
                   key=lambda d: (d['fullname'] or d['login']).lower())
-    return render_template('index.html', col_keys=assignment_files, rows=rows)
+    return render_template('index.html', assignment_names=assignment_names, col_keys=assignment_files, rows=rows)
 
 
 if __name__ == '__main__':
