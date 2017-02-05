@@ -22,6 +22,7 @@ class FileCommit(Base):
     sha = Column(String(40), ForeignKey('file_content.sha'), SHA_HASH_CONSTRAINT, nullable=False)
 
     file_content = relationship('FileContent')
+    repo = relationship('Repo', backref='files')
 
     def __repr__(self):
         return "<FileCommit %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'])
@@ -44,7 +45,7 @@ class User(Base):
     fullname = Column(String(100))
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
 
-    # file_commits = relationship('FileCommit', backref='user')
+    file_commits = relationship('Repo', backref='owner')
 
     def __repr__(self):
         return "<User %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'login', 'role'])

@@ -1,0 +1,17 @@
+<table>
+  <tr>
+    <th></th>
+    {% for name in assignment_names %}
+      <th>{{ name }}</th>
+    {% endfor %}
+  </tr>
+
+  {% for row in rows %}
+    <tr>
+      <th>{{ row.fullname or row.login }}</th>
+      {% for col_key in col_keys %}
+        <td>{{ row.status[col_key] }}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+</table>
