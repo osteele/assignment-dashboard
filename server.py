@@ -35,7 +35,9 @@ def home_page():
     rows = sorted((dict(login=login, fullname=fullname, status=val)
                    for (login, fullname), val in user_cells.items()),
                   key=lambda d: (d['fullname'] or d['login']).lower())
-    return render_template('index.html', assignment_names=assignment_names, col_keys=assignment_files, rows=rows)
+    return render_template('index.html',
+                           repo_name=source_repo.name,
+                           assignment_names=assignment_names, col_keys=assignment_files, students=rows)
 
 
 if __name__ == '__main__':

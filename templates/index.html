@@ -22,11 +22,15 @@
           {% endfor %}
         </tr>
 
-        {% for row in rows %}
+        {% for student in students %}
           <tr>
-            <th>{{ row.fullname or row.login }}</th>
+            <th><a href="https://github.com/{{ student.login }}/{{ repo_name }}">{{ student.fullname or student.login }}</a></th>
             {% for col_key in col_keys %}
-              <td class="{{ row.status[col_key] }}">{{ row.status[col_key] }}</td>
+              <td class="{% if student.status[col_key] == 'missing' %}danger{% endif %}">
+                <a href="https://github.com/{{ student.login }}/{{ repo_name }}/blob/master/{{ col_key }}">
+                  {{ student.status[col_key] }}
+                </a>
+              </td>
             {% endfor %}
           </tr>
         {% endfor %}
