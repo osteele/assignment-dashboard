@@ -36,7 +36,7 @@ def home_page():
                    for (login, fullname), val in user_cells.items()),
                   key=lambda d: (d['fullname'] or d['login']).lower())
     return render_template('index.html',
-                           repo_name=source_repo.name,
+                           org_fullname=source_repo.owner.fullname, org_login=source_repo.owner.login, repo_name=source_repo.name,
                            assignment_names=assignment_names, col_keys=assignment_files, students=rows)
 
 
