@@ -16,28 +16,36 @@ fork_dict = {fork.owner_id: fork for fork in source_repo.forks}  # FIXME abuse o
 
 users = session.query(User).all()
 
-assignment_files = sorted({file.path for file in source_repo.files if file.path.endswith('.ipynb')})
-assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_files]
+assignment_paths = sorted({file.path for file in source_repo.files if file.path.endswith('.ipynb')})
+assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_paths]
 
-files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_files)).options(joinedload(FileCommit.repo)).all()
+files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).options(joinedload(FileCommit.repo)).all()
 user_path_files = {(file.repo.owner_id, file.path): file for file in files}
 
-user_cells = {(user.login, user.fullname):
-              {pathname: ('missing' if (user.id, pathname) not in user_path_files
-                          else 'unchanged' if user_path_files[user.id, pathname] == user_path_files[source_repo.owner.id, pathname]
-                          else arrow.get(user_path_files[user.id, pathname].mod_time).humanize())
-               for pathname in assignment_files}
-              for user in users if user.role == 'student'}
+
+def file_presentation(file, path):
+    if not file:
+        return dict(css_class='danger', path=path, mod_time='missing')
+    return dict(
+        css_class='unchanged' if file.sha == user_path_files[source_repo.owner.id, file.path].sha else None,
+        mod_time=arrow.get(file.mod_time).humanize(),
+        path=path
+    )
 
 
 @app.route('/')
 def home_page():
-    rows = sorted((dict(login=login, fullname=fullname, status=val)
-                   for (login, fullname), val in user_cells.items()),
-                  key=lambda d: (d['fullname'] or d['login']).lower())
+    rows = [dict(login=user.login,
+                 fullname=user.fullname,
+                 repo_url="https://github.com/%s/%s" % (user.login, source_repo.name),
+                 responses=[file_presentation(user_path_files.get((user.id, path), None), path)
+                            for path in assignment_paths]
+                 )
+            for user in sorted(users, key=lambda u: (u.fullname or u.login).lower())
+            if user != source_repo.owner]
     return render_template('index.html',
                            org_fullname=source_repo.owner.fullname, org_login=source_repo.owner.login, repo_name=source_repo.name,
-                           assignment_names=assignment_names, col_keys=assignment_files, students=rows)
+                           assignment_names=assignment_names, col_keys=assignment_paths, rows=rows)
 
 
 if __name__ == '__main__':

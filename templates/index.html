@@ -29,13 +29,13 @@
           {% endfor %}
         </tr>
 
-        {% for student in students %}
+        {% for row in rows %}
           <tr>
-            <th><a href="https://github.com/{{ student.login }}/{{ repo_name }}">{{ student.fullname or student.login }}</a></th>
-            {% for col_key in col_keys %}
-              <td class="{% if student.status[col_key] == 'missing' %}danger{% endif %}">
-                <a href="https://github.com/{{ student.login }}/{{ repo_name }}/blob/master/{{ col_key }}">
-                  {{ student.status[col_key] }}
+            <th><a href="{{ row.repo_url }}">{{ row.fullname or row.login }}</a></th>
+            {% for response in row.responses %}
+              <td class="{{ response.css_class }}">
+                <a href="{{ row.repo_url }}/blob/master/{{ response.path }}">
+                  {{ response.mod_time }}
                 </a>
               </td>
             {% endfor %}
@@ -44,4 +44,4 @@
       </table>
     </div>
   </body>
-  </html>
+</html>
