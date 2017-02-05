@@ -1,3 +1,4 @@
+import base64
 import os
 import sys
 
@@ -75,12 +76,29 @@ session.commit()
 # insert file hashes
 #
 
+def get_file_content(repo, item):
+    blob = repo.get_git_blob(item.url.split('/')[-1])
+    content = blob.content
+    if blob.encoding == 'base64':
+        content = base64.b64decode(content)
+    return content
+
+
+def is_downloadable(item):
+    return any(item.path.endswith(suffix) for suffix in ['.ipynb', '.py', '.md', '.txt'])
+
+
 file_hashes = {item.sha: (repo, item)
                for repo in all_repos
                for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
                if item.type == 'blob'}
 
-file_contents = [FileContent(sha=item.sha, content='') for repo, item in file_hashes.values()]
+db_file_contents = dict(session.query(FileContent.sha, FileContent.content_type).filter(FileContent.sha.in_(file_hashes)))
+
+file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) if is_downloadable(item) else None)
+                 for repo, item in file_hashes.values()
+                 if item.sha not in db_file_contents or is_downloadable(item) and db_file_contents[item.sha] is None]
+len(file_contents)
 
 upsert(session, file_contents, FileContent.sha)
 session.commit()  # TODO remove this; commit with next transaction
