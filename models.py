@@ -1,10 +1,11 @@
+import os
+
 from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey,
                         Integer, String, Text, UniqueConstraint, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-DATABASE_URL = 'sqlite:///database.db'
-
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
 
 Base = declarative_base()
