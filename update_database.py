@@ -4,6 +4,7 @@ import sys
 
 import arrow
 from github import Github
+from sqlalchemy.sql.expression import func
 
 from models import Commit, FileCommit, FileContent, Repo, Session, User
 from utils import upsert
@@ -82,12 +83,12 @@ file_hashes = {item.sha: (repo, item)
                for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
                if item.type == 'blob'}
 
-db_file_contents = dict(session.query(FileContent.sha, FileContent.content_type).filter(FileContent.sha.in_(file_hashes)))
+db_file_contents = dict(session.query(FileContent.sha, func.length(FileContent.content)).filter(FileContent.sha.in_(file_hashes)))
 
 file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) if is_downloadable(item) else None)
                  for repo, item in file_hashes.values()
                  if item.sha not in db_file_contents or is_downloadable(item) and db_file_contents[item.sha] is None]
-len(file_contents)
+print('downloaded %d files' % sum(fc.content for fc in file_contents))
 
 upsert(session, file_contents, FileContent.sha)
 session.commit()  # TODO remove this; commit with next transaction
