@@ -114,6 +114,10 @@ def parse_git_datetime(s):
     return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
 
 
+def own_commit(repo, commit):
+    return not commit.author or commit.author == repo.owner or commit.author.login == 'web-flow'
+
+
 logged_commit_shas = {sha for sha, in session.query(Commit.sha)}  # TODO restrict to fetched timespan
 print('fetching commits')
 
@@ -126,7 +130,7 @@ print('processing %d commits; ignoring %d previously processed' % (len(repo_comm
 # Use a dict, to record only the latest commit for each file
 file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
                     for repo, commit in reversed(repo_commits)
-                    if repo == source_repo or (commit.author == repo.owner and len(commit.parents) == 1)
+                    if repo == source_repo or (own_commit(repo, commit) and len(commit.parents) == 1)
                     for item in commit.files}
 print('processing %d file commits' % len(file_commit_recs))
 
