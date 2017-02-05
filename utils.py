@@ -25,5 +25,5 @@ def upsert(session, instances, *key_attrs):
         instance = instance_map.pop(key)
         instance.id = id
         session.merge(instance)
-    print('%s: updated %d records; added %d records' % (klass.__name__, len(instances) - len(instance_map), len(instance_map)))
+    print('%s: merged %d records; added %d records' % (klass.__name__, len(instances) - len(instance_map), len(instance_map)))
     session.add_all(instance_map.values())

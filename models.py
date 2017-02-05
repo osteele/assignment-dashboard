@@ -1,6 +1,6 @@
 import sqlalchemy.types as types
-from sqlalchemy import (CheckConstraint, Column, Enum, ForeignKey, Integer,
-                        String, Text, UniqueConstraint, create_engine)
+from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey,
+                        Integer, String, Text, UniqueConstraint, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship, sessionmaker
 
@@ -13,13 +13,14 @@ Base = declarative_base()
 
 class FileCommit(Base):
     __tablename__ = 'file_commit'
-    __table_args__ = (UniqueConstraint('user_id', 'path'),)
+    __table_args__ = (UniqueConstraint('repo_id', 'path'),)
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, index=True)
+    repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     path = Column(String(1024), nullable=False)
-    mod_time = Column(types.DateTime, nullable=False)
+    mod_time = Column(DateTime, nullable=False)  # de-normalized from the related commit
     sha = Column(String(40), ForeignKey('file_content.sha'), SHA_HASH_CONSTRAINT, nullable=False)
+
     file_content = relationship('FileContent')
 
 
@@ -40,7 +41,7 @@ class User(Base):
     fullname = Column(String(100))
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
 
-    file_commits = relationship('FileCommit', backref='user')
+    # file_commits = relationship('FileCommit', backref='user')
 
 
 class Repo(Base):
@@ -50,6 +51,7 @@ class Repo(Base):
     owner_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     source_id = Column(Integer, ForeignKey('repo.id'), nullable=True)
     name = Column(String(100), nullable=False)
+    refreshed_at = Column(DateTime)
 
     source = relationship('Repo', remote_side=[id])
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))

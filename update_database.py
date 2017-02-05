@@ -33,7 +33,7 @@ print('fetching repos')
 source_repo = gh.get_repo(source_repo_name)
 student_repos = sorted((repo for repo in source_repo.get_forks()
                         if repo.owner.login not in instructor_logins),
-                       key=lambda repo: repo.owner.login.lower())
+                       key=lambda repo: repo.owner.login.lower())[:1]
 all_repos = [source_repo] + student_repos
 
 
@@ -57,8 +57,10 @@ repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=rep
 upsert(session, repo_instances, Repo.owner_id, Repo.name)
 session.commit()
 
+repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
 
-# insert file hashes
+
+# update file contents
 #
 
 def get_file_content(repo, item):
@@ -91,29 +93,36 @@ upsert(session, file_contents, FileContent.sha)
 session.commit()  # TODO remove this; commit with next transaction
 
 
-# insert file commits
+# update file commits
 #
 
 
 def parse_git_datetime(s):
     return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
 
+
+def instance_for_repo(repo):
+    owner = user_instance_map[repo.owner.login]
+    return repo_instance_map[owner.id, repo.name]
+
+
 print('updating file commits')
 
 repo_commits = [(repo, commit)
                 for repo in all_repos
-                for commit in repo.get_commits()
-                if repo == source_repo or (commit.author == repo.owner and len(commit.parents) == 1)]
+                for commit in repo.get_commits()]
 len(repo_commits)
 
 # Use a dict, to record only the latest commit for each file
-file_commit_recs = {(repo.owner.login, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
+file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
                     for repo, commit in reversed(repo_commits)
+                    if repo == source_repo or (commit.author == repo.owner and len(commit.parents) == 1)
                     for item in commit.files}
 len(file_commit_recs)
 
-file_commits = [FileCommit(user_id=user_instance_map[login].id, path=path, mod_time=mod_time, sha=sha)
-                for (login, path), (sha, mod_time) in file_commit_recs.items()]
 
-upsert(session, file_commits, FileCommit.user_id, FileCommit.path)
+file_commits = [FileCommit(repo_id=repo_id, path=path, mod_time=mod_time, sha=sha)
+                for (repo_id, path), (sha, mod_time) in file_commit_recs.items()]
+
+upsert(session, file_commits, FileCommit.repo_id, FileCommit.path)
 session.commit()
