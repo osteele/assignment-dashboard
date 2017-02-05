@@ -37,26 +37,27 @@ all_repos = [source_repo] + student_repos
 # insert students
 #
 
-def upsert(session, instances, *keys):
+def upsert(session, instances, *key_attrs):
     """Merge or add instances to the session.
 
-    Instance are merged if the database contains a row with the same values for keys.
+    Instance are merged if the database contains a row with the same values for key_attrs.
     """
-    MAX_ROWS = 200
+    MAX_ROWS = 200  # empirially, some number 200 < n < 550 can generate queries that are too long
     if not instances:
         return
     if len(instances) > MAX_ROWS:
-        upsert(session, instances[:MAX_ROWS], *keys)
-        upsert(session, instances[MAX_ROWS:], *keys)
+        upsert(session, instances[:MAX_ROWS], *key_attrs)
+        upsert(session, instances[MAX_ROWS:], *key_attrs)
         return
     klass = instances[0].__class__
-    instance_map = {tuple(getattr(instance, key) for key in keys): instance
+    instance_map = {tuple(getattr(instance, attr.key) for attr in key_attrs): instance
                     for instance in instances}
-    rows = session.query(klass.id, *(getattr(klass, key) for key in keys))
-    for i, key in enumerate(keys):
-        rows = rows.filter(getattr(klass, key).in_({k[i] for k in instance_map.keys()}))
+    rows = session.query(klass.id, *(getattr(klass, attr.key) for attr in key_attrs))
+    for i, attr in enumerate(key_attrs):
+        rows = rows.filter(getattr(klass, attr.key).in_({k[i] for k in instance_map.keys()}))
     for id, *keys_values in rows:
         key = tuple(keys_values)
+        # the query filters by the outer product of the key attribute values, so the key might not be in the map
         if key not in instance_map:
             continue
         instance = instance_map.pop(key)
@@ -67,7 +68,7 @@ def upsert(session, instances, *keys):
 
 students = [User(login=repo.owner.login, fullname=repo.owner.name, role='organization' if repo == source_repo else 'student')
             for repo in all_repos]
-upsert(session, students, 'login')
+upsert(session, students, User.login)
 session.commit()
 
 
@@ -81,7 +82,7 @@ file_hashes = {item.sha: (repo, item)
 
 file_contents = [FileContent(sha=item.sha, content='') for repo, item in file_hashes.values()]
 
-upsert(session, file_contents, 'sha')
+upsert(session, file_contents, FileContent.sha)
 session.commit()  # TODO remove this; commit with next transaction
 
 
@@ -110,5 +111,5 @@ user_instance_map = {instance.login: instance for instance in user_instances}  #
 file_commits = [FileCommit(user_id=user_instance_map[login].id, path=path, mod_time=mod_time, sha=sha)
                 for (login, path), (sha, mod_time) in file_commit_recs.items()]
 
-upsert(session, file_commits, 'user_id', 'path')
+upsert(session, file_commits, FileCommit.user_id, FileCommit.path)
 session.commit()
