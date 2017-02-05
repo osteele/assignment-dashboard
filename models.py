@@ -3,7 +3,7 @@ import os
 from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey,
                         Integer, String, Text, UniqueConstraint, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import deferred, relationship, sessionmaker
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
@@ -34,7 +34,7 @@ class FileContent(Base):
     id = Column(Integer, primary_key=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True, unique=True)
     content_type = Column(String(40), nullable=True)
-    content = Column(Text, nullable=True)
+    content = deferred(Column(Text, nullable=True))
 
 
 class User(Base):
