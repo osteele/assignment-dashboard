@@ -130,7 +130,7 @@ print('processing %d commits; ignoring %d previously processed' % (len(repo_comm
 # Use a dict, to record only the latest commit for each file
 file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
                     for repo, commit in reversed(repo_commits)
-                    if repo == source_repo or (own_commit(repo, commit) and len(commit.parents) == 1)
+                    if repo == source_repo or own_commit(repo, commit)
                     for item in commit.files}
 print('processing %d file commits' % len(file_commit_recs))
 
