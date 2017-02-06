@@ -1,3 +1,13 @@
+"""
+Update the database.
+
+This depends on the database already having been created.
+
+The code is meant to be run as a script.
+It's written in notebook format rather than packaged into a function that can be run on demand.
+See the README for a discussion.
+"""
+
 import base64
 import os
 import sys
