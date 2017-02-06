@@ -36,7 +36,7 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 4. Initialize the database
 
-    $ python models.py
+    $ ./scripts/reset_database
 
 
 ## Usage

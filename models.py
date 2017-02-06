@@ -9,6 +9,8 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
 
 Base = declarative_base()
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(bind=engine)
 
 
 class FileCommit(Base):
@@ -77,12 +79,3 @@ class Commit(Base):
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
-
-
-engine = create_engine(DATABASE_URL)
-
-Session = sessionmaker(bind=engine)
-
-if __name__ == '__main__':
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
