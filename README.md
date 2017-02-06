@@ -78,10 +78,10 @@ You can verify code against these style guides via:
 
 or by setting up a [git pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) to run the latter command.
 
-The update script are written in a Jupyter-notebook-like style, for easy development with the
+The update script is written in a Jupyter-notebook-like style, for easy development with the
 [Hydrogen Atom plugin-in](https://atom.io/packages/hydrogen) and the
 [Python Visual Studio Code extension](https://github.com/DonJayamanne/pythonVSCode/wiki/Jupyter-(IPython)).
 
 Specifically, it is light on functions and heavy on global variables.
 
-This is an experiment, and may not have legs.
+Use of this style is an experiment, and may not have legs.
