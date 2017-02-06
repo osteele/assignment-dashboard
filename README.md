@@ -13,6 +13,7 @@ It works for me :-)
 Possible enhancements are listed [here](https://github.com/osteele/assignment-dashboard/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement),
 with the [next major milestone](https://github.com/osteele/assignment-dashboard/issues?utf8=✓&q=is%3Aopen%20is%3Aissue%20milestone%3A%22Web%201.0%22%20) being to run it in the cloud.
 
+
 ## Setup
 
 ### 1. Install Python
@@ -54,7 +55,7 @@ This picks up new commits.
 
 Launch Flask:
 
-    $ python3 server.py
+    $ python3 app.py
 
 Then browse to <http://localhost:4000>.
 
