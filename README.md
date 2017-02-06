@@ -10,11 +10,8 @@ in tabular format.
 
 It works for me :-)
 
-The next major steps are to deploy to Heroku – but first, to hide requests behind OAuth so it's safe on the open wweb.
-
-(This doesn't technically reveal FERPA information or anything that's not already discoverable; but it promotes
-the information too high for my taste.)
-
+Possible enhancements are listed [here](https://github.com/osteele/assignment-dashboard/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement),
+with the [next major milestone](https://github.com/osteele/assignment-dashboard/issues?utf8=✓&q=is%3Aopen%20is%3Aissue%20milestone%3A%22Web%201.0%22%20) being to run it in the cloud.
 
 ## Setup
 
