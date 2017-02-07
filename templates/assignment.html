@@ -29,13 +29,17 @@
 
         <!-- Nav tabs -->
         <ul class="nav nav-tabs" role="tablist">
-          <li role="presentation" class="active"><a href="#collation" aria-controls="collation" role="tab" data-toggle="tab">Collation</a></li>
-          <!-- <li role="presentation"><a href="#assignment" aria-controls="assignment" role="tab" data-toggle="tab">Messages</a></li> -->
+          <li role="presentation"><a href="#assignment" aria-controls="assignment" role="tab" data-toggle="tab">Assignment Notebook</a></li>
+          <li role="presentation" class="active"><a href="#collation" aria-controls="collation" role="tab" data-toggle="tab">Combined Notebok</a></li>
           <!-- <li role="presentation"><a href="#summary" aria-controls="summary" role="tab" data-toggle="tab">Summary</a></li> -->
         </ul>
 
         <!-- Tab panes -->
         <div class="tab-content">
+          <div role="tabpanel" class="tab-pane" id="assignment">
+            <iframe src="{{ assignment_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+          </div>
+
           <div role="tabpanel" class="tab-pane active" id="collation">
             <div class="text-center">
               <div class="btn-group" role="toolbar">
@@ -44,11 +48,9 @@
                 </a>
               </div>
             </div>
-
-            <iframe src="{{ collated_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+            <iframe src="{{ collated_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
           </div>
 
-          <div role="tabpanel" class="tab-pane" id="assignment">.3..</div>
           <div role="tabpanel" class="tab-pane" id="summary">..2.</div>
         </div>
 

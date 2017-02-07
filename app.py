@@ -5,7 +5,8 @@ from flask import Flask, make_response, render_template, url_for
 from nbconvert import HTMLExporter
 
 from globals import PYNB_MIME_TYPE
-from viewmodel import get_combined_notebook, get_repo_forks_model
+from viewmodel import (get_assignment_notebook, get_combined_notebook,
+                       get_repo_forks_model)
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -33,12 +34,18 @@ def assignment(assignment_id):
         classroom_repo=model.source_repo,
         assignment_name=assignment_name,
         assignment_path=assignment_path,
-        collated_html_url=url_for('combined_assignment', assignment_id=assignment_id),
+        assignment_nb_html_url=url_for('assignment_notebook', assignment_id=assignment_id),
+        collated_nb_html_url=url_for('combined_assignment', assignment_id=assignment_id),
         collated_nb_download_url=url_for('download_combined_assignment', assignment_id=assignment_id),
     )
 
 
-@app.route('/assignment/<assignment_id>/combined')
+@app.route('/assignment/<assignment_id>.ipynb.html')
+def assignment_notebook(assignment_id):
+    return HTMLExporter().from_notebook_node(get_assignment_notebook(int(assignment_id)))
+
+
+@app.route('/assignment/<assignment_id>/combined.ipynb.html')
 def combined_assignment(assignment_id):
     model = get_combined_notebook(int(assignment_id))
     return HTMLExporter().from_notebook_node(model.collated_nb)

@@ -69,15 +69,23 @@ def get_repo_forks_model(session=None):
         responses=responses)
 
 
+def get_assignment_notebook(assignment_id):
+    session = Session()
+    source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
+    assignemnt_fcs = sorted({fc for fc in source_repo.files if fc.path.endswith('.ipynb')}, key=lambda fc: fc.path)
+    fc = assignemnt_fcs[assignment_id]
+    return nbformat.reads(fc.file_content.content, as_version=4)
+
+
 def get_combined_notebook(assignment_id):
     session = Session()
-    data = get_repo_forks_model(session)
-    assignment_path = data.assignment_paths[assignment_id]
+    model = get_repo_forks_model(session)
+    assignment_path = model.assignment_paths[assignment_id]
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment_path).options(joinedload(FileCommit.repo)).all()
     nbs = {file.repo.owner.login: safe_read_notebook(file.file_content.content.decode(), clear_outputs=True)
            for file in files
            if file.file_content}
-    owner_nb = nbs[data.source_repo.owner.login]
-    student_nbs = {owner: nb for owner, nb in nbs.items() if owner != data.source_repo.owner.login and nb}
+    owner_nb = nbs[model.source_repo.owner.login]
+    student_nbs = {owner: nb for owner, nb in nbs.items() if owner != model.source_repo.owner.login and nb}
     return AssignmentModel(assignment_path, nb_combine(owner_nb, student_nbs))
