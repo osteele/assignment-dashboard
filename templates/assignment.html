@@ -35,11 +35,11 @@
   </head>
 
   <body>
-    <div class="jumbotron">
-      <div class="container">
-        <h1>{{ classroom_owner.login }} / {{ classroom_repo.name }} / {{ assignment_name }}</h1>
-      </div>
-    </div>
+    <ol class="breadcrumb">
+      <li>{{ classroom_owner.login }}</li>
+      <li>{{ classroom_repo.name }}</li>
+      <li>{{ assignment_name }}</li>
+    </ol>
 
     <div class="container">
       <div>
@@ -54,8 +54,16 @@
         <!-- Tab panes -->
         <div class="tab-content">
           <div role="tabpanel" class="tab-pane active" id="collation">
+            <div class="text-center">
+              <div class="btn-group" role="toolbar">
+                <a type="button" class="btn btn-default" title="download notebook" href="{{ collated_nb_download_url }}">
+                  <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                </a>
+              </div>
+            </div>
+
             <div class="fluid">
-              <iframe src="/assignment/{{ assignment_id }}/combined" frameborder="0"></iframe>
+              <iframe src="{{ collated_html_url }}" frameborder="0"></iframe>
             </div>
           </div>
           <div role="tabpanel" class="tab-pane" id="assignment">.3..</div>
