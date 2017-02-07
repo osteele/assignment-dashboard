@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+      function resizeIframe(obj) {
+        obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+      }
+    </script>
   </head>
 
   <body>
@@ -40,10 +45,9 @@
               </div>
             </div>
 
-            <div class="fluid">
-              <iframe src="{{ collated_html_url }}" frameborder="0"></iframe>
-            </div>
+            <iframe src="{{ collated_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
           </div>
+
           <div role="tabpanel" class="tab-pane" id="assignment">.3..</div>
           <div role="tabpanel" class="tab-pane" id="summary">..2.</div>
         </div>
