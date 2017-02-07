@@ -40,10 +40,10 @@
 
         {% for row in student_responses %}
           <tr>
-            <th><a href="{{ row.repo_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
+            <th><a href="{{ row.repo.html_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
             {% for response in row.responses %}
               <td class="{{ response.css_class }}">
-                <a href="{{ row.repo_url }}/blob/master/{{ response.path }}" title="View the student file">
+                <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="View the student file">
                   {{ response.mod_time }}
                 </a>
               </td>

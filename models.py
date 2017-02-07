@@ -70,6 +70,10 @@ class Repo(Base):
     def __repr__(self):
         return "<Repo %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'])
 
+    @property
+    def html_url(self):
+        return"https://github.com/%s/%s" % (self.owner.login, self.name)
+
 
 class Commit(Base):
     __tablename__ = 'commit'

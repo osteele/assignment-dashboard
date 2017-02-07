@@ -1,10 +1,14 @@
+"""
+Implements the View-Model of an MVVM architecture.
+"""
+
 import re
 from collections import namedtuple
 
 import arrow
 from sqlalchemy.orm import joinedload
 
-from models import FileCommit, Repo, Session, User
+from models import FileCommit, Repo, Session
 from nb_combine import nb_combine, safe_read_notebook
 
 RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
@@ -14,32 +18,32 @@ AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb')
 def get_repo_forks_model(session=None):
     session = session or Session()
     source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
-    users = session.query(User).all()
 
-    assignment_paths = sorted(
-        {file.path for file in source_repo.files if file.path.endswith('.ipynb')})
+    # source_repo.fork(lazy='joined') doesn't work :-()
+    repos = session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(source_repo.id)).all()
+
+    assignment_paths = sorted({file.path for file in source_repo.files if file.path.endswith('.ipynb')})
     assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_paths]
 
-    files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).options(joinedload(FileCommit.repo)).all()
+    # instead of repo.files, to avoid 1 + N
+    files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
     user_path_files = {(file.repo.owner_id, file.path): file for file in files}
 
     def file_presentation(file, path):
         if not file:
             return dict(css_class='danger', path=path, mod_time='missing')
         return dict(
-            css_class='unchanged' if file.sha == user_path_files[
-                source_repo.owner.id, file.path].sha else None,
+            css_class='unchanged' if file.sha == user_path_files[source_repo.owner.id, file.path].sha else None,
             mod_time=arrow.get(file.mod_time).humanize(),
             path=path
         )
 
-    responses = [dict(user=user,
-                      repo_url="https://github.com/%s/%s" % (user.login, source_repo.name),
-                      responses=[file_presentation(user_path_files.get((user.id, path), None), path)
+    responses = [dict(user=repo.owner,
+                      repo=repo,
+                      responses=[file_presentation(user_path_files.get((repo.owner.id, path), None), path)
                                  for path in assignment_paths]
                       )
-                 for user in users
-                 if user != source_repo.owner]
+                 for repo in repos]
 
     return RepoForksModel(
         source_repo=source_repo,
