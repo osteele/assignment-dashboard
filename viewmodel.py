@@ -16,6 +16,8 @@ from nb_combine import nb_combine, safe_read_notebook
 RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb')
 
+session = Session()
+
 
 def update_content_types(file_contents):
     for fc in file_contents:
@@ -27,8 +29,7 @@ def update_content_types(file_contents):
                 fc.content_type = ''
 
 
-def get_repo_forks_model(session=None):
-    session = session or Session()
+def get_repo_forks_model():
     source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
 
     # source_repo.fork(lazy='joined') doesn't work :-()
@@ -70,7 +71,6 @@ def get_repo_forks_model(session=None):
 
 
 def get_assignment_notebook(assignment_id):
-    session = Session()
     source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
     assignemnt_fcs = sorted({fc for fc in source_repo.files if fc.path.endswith('.ipynb')}, key=lambda fc: fc.path)
     fc = assignemnt_fcs[assignment_id]
@@ -78,14 +78,13 @@ def get_assignment_notebook(assignment_id):
 
 
 def get_combined_notebook(assignment_id):
-    session = Session()
-    model = get_repo_forks_model(session)
+    model = get_repo_forks_model()
     assignment_path = model.assignment_paths[assignment_id]
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment_path).options(joinedload(FileCommit.repo)).all()
-    nbs = {file.repo.owner.login: safe_read_notebook(file.file_content.content.decode(), clear_outputs=True)
-           for file in files
-           if file.file_content}
+    nbs = {fc.repo.owner.login: safe_read_notebook(fc.file_content.content.decode(), clear_outputs=True)
+           for fc in files
+           if fc.file_content}
     owner_nb = nbs[model.source_repo.owner.login]
     student_nbs = {owner: nb for owner, nb in nbs.items() if owner != model.source_repo.owner.login and nb}
     return AssignmentModel(assignment_path, nb_combine(owner_nb, student_nbs))
