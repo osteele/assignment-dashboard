@@ -22,6 +22,12 @@ def home_page():
         student_responses=sorted(data.responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
 
 
+# HTML from HTMLExporter.from_notebook_node requests this
+@app.route('/assignment/custom.css')
+def empty():
+    return ''
+
+
 @app.route('/assignment/<assignment_id>')
 def assignment(assignment_id):
     model = get_repo_forks_model()
