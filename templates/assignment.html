@@ -1,32 +1,24 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "layout.html" %}
+{% block title %}{{ assignment_name }}{% endblock %}
 
-    <title>{{ assignment_name }}</title>
+{%block head %}
+  <script>
+    function resizeIframe(obj) {
+      obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+    }
+  </script>
+{% endblock %}
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/style.css">
-    <script>
-      function resizeIframe(obj) {
-        obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
-      }
-    </script>
-  </head>
+{% block breadcrumbs %}
+  <ol class="breadcrumb">
+    <li>{{ classroom_owner.login }}</li>
+    <li><a href="/">{{ classroom_repo.name }}</a></li>
+    <li>{{ assignment_name }}</li>
+  </ol>
+{% endblock %}
 
-  <body>
-    <ol class="breadcrumb">
-      <li>{{ classroom_owner.login }}</li>
-      <li><a href="/">{{ classroom_repo.name }}</a></li>
-      <li>{{ assignment_name }}</li>
-    </ol>
-
-    <div class="container">
-      <div>
-
+{% block content %}
+      <div class="container">
         <!-- Nav tabs -->
         <ul class="nav nav-tabs" role="tablist">
           <li role="presentation"><a href="#assignment" aria-controls="assignment" role="tab" data-toggle="tab">Assignment Notebook</a></li>
@@ -41,8 +33,6 @@
           </div>
 
           <div role="tabpanel" class="tab-pane active" id="collation">
-
-
             <div class="row">
               <div class="col-md-10 col-md-offset-1 content">
                 <h1><small>{{ assignment_path }}
@@ -54,16 +44,10 @@
                 <iframe src="{{ collated_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
               </div>
             </div>
-
           </div>
 
           <div role="tabpanel" class="tab-pane" id="summary">..2.</div>
         </div>
 
-      </div>
     </div>
-
-  </body>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-</html>
+{% endblock %}

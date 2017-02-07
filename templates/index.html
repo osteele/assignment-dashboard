@@ -1,57 +1,46 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "layout.html" %}
+{% block title %}{{ classroom_owner.login }}/{{ classroom_repo.name }}{% endblock %}
 
-    <title>{{ classroom_owner.login }}/{{ classroom_repo.name }}</title>
+{% block breadcrumbs %}
+  <nav class="navbar navbar-fixed-top">
+    <ol class="breadcrumb">
+      <li>{{ classroom_owner.login }}</li>
+      <li>{{ classroom_repo.name }}</li>
+    </ol>
+  </nav>
+{% endblock %}
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/style.css">
-  </head>
-
-  <body>
-    <nav class="navbar navbar-fixed-top">
-      <ol class="breadcrumb">
-        <li>{{ classroom_owner.login }}</li>
-        <li>{{ classroom_repo.name }}</li>
-      </ol>
-    </nav>
-
-    <div class="container">
-      <div class="jumbotron">
-        <div class="container">
-          <h1><small>{{ classroom_owner.login }} / {{ classroom_repo.name }}</small></h1>
-          <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ classroom_repo.name}} forks.</small></p>
-        </div>
+{% block content %}
+  <div class="container">
+    <div class="jumbotron">
+      <div class="container">
+        <h1><small>{{ classroom_owner.login }} / {{ classroom_repo.name }}</small></h1>
+        <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ classroom_repo.name}} forks.</small></p>
       </div>
     </div>
+  </div>
 
-    <div class="container">
-      <table class="table table-condensed table-striped">
+  <div class="container">
+    <table class="table table-condensed table-striped">
+      <tr>
+        <th></th>
+        {% for assignment in assignments %}
+          <th><a href="{{ url_for('assignment', assignment_id=assignment[0]) }}" title="View the combined notebook">{{ assignment[1] }}</a></th>
+        {% endfor %}
+      </tr>
+
+      {% for row in student_responses %}
         <tr>
-          <th></th>
-          {% for assignment in assignments %}
-            <th><a href="{{ url_for('assignment', assignment_id=assignment[0]) }}" title="View the combined notebook">{{ assignment[1] }}</a></th>
+          <th><a href="{{ row.repo.html_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
+          {% for response in row.responses %}
+            <td class="{{ response.css_class }}">
+              <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="View the student file">
+                {{ response.mod_time }}
+              </a>
+            </td>
           {% endfor %}
         </tr>
-
-        {% for row in student_responses %}
-          <tr>
-            <th><a href="{{ row.repo.html_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
-            {% for response in row.responses %}
-              <td class="{{ response.css_class }}">
-                <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="View the student file">
-                  {{ response.mod_time }}
-                </a>
-              </td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </table>
-    </div>
-  </body>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-</html>
+      {% endfor %}
+    </table>
+  </div>
+{% endblock %}
