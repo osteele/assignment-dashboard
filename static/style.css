@@ -1,1 +1,5 @@
 .jumbotron { padding-bottom: 0.5em; padding-left: 0.6em; padding-right: 0.6em; padding-top: 0.8em; }
+
+iframe {
+  background:url(https://cdnjs.cloudflare.com/ajax/libs/bxslider/4.2.5/images/bx_loader.gif) center no-repeat;
+}
