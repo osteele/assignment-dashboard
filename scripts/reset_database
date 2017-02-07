@@ -5,8 +5,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-if True:  # this keeps isort-imports from moving the import above sys.path.append
-    from models import Base
+from models import Base, engine  # isort:skip
 
 if __name__ == '__main__':
     Base.metadata.drop_all(engine)
