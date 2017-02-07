@@ -23,7 +23,7 @@ class FileCommit(Base):
     mod_time = Column(DateTime, nullable=False)  # de-normalized from the related commit
     sha = Column(String(40), ForeignKey('file_content.sha'), SHA_HASH_CONSTRAINT, nullable=False)
 
-    file_content = relationship('FileContent')
+    file_content = relationship('FileContent', backref='files')
     repo = relationship('Repo', backref='files')
 
     def __repr__(self):
