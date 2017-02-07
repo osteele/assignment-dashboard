@@ -72,7 +72,7 @@ class Repo(Base):
 
     @property
     def html_url(self):
-        return"https://github.com/%s/%s" % (self.owner.login, self.name)
+        return "https://github.com/%s/%s" % (self.owner.login, self.name)
 
 
 class Commit(Base):

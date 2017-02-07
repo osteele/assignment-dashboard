@@ -6,13 +6,25 @@ import re
 from collections import namedtuple
 
 import arrow
+import nbformat
 from sqlalchemy.orm import joinedload
 
+from globals import PYNB_MIME_TYPE
 from models import FileCommit, Repo, Session
 from nb_combine import nb_combine, safe_read_notebook
 
 RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb')
+
+
+def update_content_types(file_contents):
+    for fc in file_contents:
+        if fc.content_type is None:
+            try:
+                nbformat.reads(fc.content, as_version=4)  # for effect
+                fc.content_type = PYNB_MIME_TYPE
+            except nbformat.reader.NotJSONError:
+                fc.content_type = ''
 
 
 def get_repo_forks_model(session=None):
@@ -26,14 +38,19 @@ def get_repo_forks_model(session=None):
     assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_paths]
 
     # instead of repo.files, to avoid 1 + N
-    files = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
-    user_path_files = {(file.repo.owner_id, file.path): file for file in files}
+    file_commits = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
+    user_path_files = {(fc.repo.owner_id, fc.path): fc for fc in file_commits}
+    update_content_types([fc.file_content for fc in file_commits if fc.file_content])
+    session.commit()
 
     def file_presentation(file, path):
         if not file:
             return dict(css_class='danger', path=path, mod_time='missing')
         return dict(
-            css_class='unchanged' if file.sha == user_path_files[source_repo.owner.id, file.path].sha else None,
+            css_class=('warning' if file.sha == user_path_files[source_repo.owner.id, file.path].sha
+                       else 'danger' if not file.file_content
+                       else 'warning' if not file.file_content != 'PYNB_MIME_TYPE'
+                       else None),
             mod_time=arrow.get(file.mod_time).humanize(),
             path=path
         )

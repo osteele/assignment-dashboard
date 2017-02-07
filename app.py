@@ -4,9 +4,8 @@ import nbformat
 from flask import Flask, make_response, render_template, url_for
 from nbconvert import HTMLExporter
 
+from globals import PYNB_MIME_TYPE
 from viewmodel import get_combined_notebook, get_repo_forks_model
-
-PYNB_MIME_TYPE = 'application/x-ipynb+json'
 
 app = Flask(__name__, static_url_path='/static')
 
