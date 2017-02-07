@@ -8,7 +8,7 @@ from viewmodel import get_assignment_data, get_combined_notebook
 
 PYNB_MIME_TYPE = 'application/x-ipynb+json'
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
 
 @app.route('/')
