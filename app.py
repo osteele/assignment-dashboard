@@ -16,12 +16,10 @@ def home_page():
     data = get_assignment_data()
     return render_template(
         'index.html',
-        org_fullname=data.source_repo.owner.fullname,
-        org_login=data.source_repo.owner.login,
-        repo_name=data.source_repo.name,
+        classroom_owner=data.source_repo.owner,
+        classroom_repo=data.source_repo,
         assignments=enumerate(data.assignment_names),
-        col_keys=data.assignment_paths,
-        rows=data.responses)
+        student_responses=data.responses)
 
 
 @app.route('/assignment/<assignment_id>')
@@ -32,8 +30,8 @@ def assignment(assignment_id):
     # missing = [owner for owner, nb in nbs.items() if not nb]
     return render_template(
         'assignment.html',
-        classroom_repo=data.source_repo,
         classroom_owner=data.source_repo.owner,
+        classroom_repo=data.source_repo,
         assignment_name=assignment_name,
         assignment_path=assignment_path,
         collated_html_url=url_for('combined_assignment', assignment_id=assignment_id),

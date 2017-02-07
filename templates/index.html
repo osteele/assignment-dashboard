@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{ org_login }}/{{ repo_name }}</title>
+    <title>{{ classroom_owner.login }}/{{ classroom_repo.name }}</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
@@ -13,10 +13,19 @@
   </head>
 
   <body>
-    <div class="jumbotron">
-      <div class="container">
-        <h1>{{ org_login }} / {{ repo_name}}</h1>
-        <p>{{ org_fullname or org_login | capitalize }} {{ repo_name}} forks.</p>
+    <nav class="navbar navbar-fixed-top">
+      <ol class="breadcrumb">
+        <li>{{ classroom_owner.login }}</li>
+        <li>{{ classroom_repo.name }}</li>
+      </ol>
+    </nav>
+
+    <div class="container">
+      <div class="jumbotron">
+        <div class="container">
+          <h1><small>{{ classroom_owner.login }} / {{ classroom_repo.name }}</small></h1>
+          <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ classroom_repo.name}} forks.</small></p>
+        </div>
       </div>
     </div>
 
@@ -25,11 +34,11 @@
         <tr>
           <th></th>
           {% for assignment in assignments %}
-            <th><a href="/assignment/{{ assignment[0] }}" title="View the combined notebook">{{ assignment[1] }}</a></th>
+            <th><a href="{{ url_for('assignment', assignment_id=assignment[0]) }}" title="View the combined notebook">{{ assignment[1] }}</a></th>
           {% endfor %}
         </tr>
 
-        {% for row in rows %}
+        {% for row in student_responses %}
           <tr>
             <th><a href="{{ row.repo_url }}" title="View the student repo">{{ row.fullname or row.login }}</a></th>
             {% for response in row.responses %}
