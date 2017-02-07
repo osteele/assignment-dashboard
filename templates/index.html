@@ -30,17 +30,17 @@
       <table class="table table-condensed table-striped">
         <tr>
           <th></th>
-          {% for name in assignment_names %}
-            <th>{{ name }}</th>
+          {% for assignment in assignments %}
+            <th><a href="/assignment/{{ assignment[0] }}" title="View the combined notebook">{{ assignment[1] }}</a></th>
           {% endfor %}
         </tr>
 
         {% for row in rows %}
           <tr>
-            <th><a href="{{ row.repo_url }}">{{ row.fullname or row.login }}</a></th>
+            <th><a href="{{ row.repo_url }}" title="View the student repo">{{ row.fullname or row.login }}</a></th>
             {% for response in row.responses %}
               <td class="{{ response.css_class }}">
-                <a href="{{ row.repo_url }}/blob/master/{{ response.path }}">
+                <a href="{{ row.repo_url }}/blob/master/{{ response.path }}" title="View the student file">
                   {{ response.mod_time }}
                 </a>
               </td>

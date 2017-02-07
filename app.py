@@ -3,18 +3,21 @@ import re
 from collections import namedtuple
 
 import arrow
+# import nbconvert
 from flask import Flask, redirect, render_template, request, url_for
+from nbconvert import HTMLExporter
 from sqlalchemy.orm import joinedload
 
 from models import FileCommit, Repo, Session, User
+from nb_combine import nb_combine, safe_read_notebook
 
 app = Flask(__name__)
 
 AssignmentData = namedtuple('AssignmentData', 'source_repo assignment_names assignment_paths responses')
 
 
-def get_assignment_data():
-    session = Session()
+def get_assignment_data(session=None):
+    session = session or Session()
     source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
     users = session.query(User).all()
 
@@ -51,13 +54,47 @@ def get_assignment_data():
 @app.route('/')
 def home_page():
     data = get_assignment_data()
-    return render_template('index.html',
-                           org_fullname=data.source_repo.owner.fullname,
-                           org_login=data.source_repo.owner.login,
-                           repo_name=data.source_repo.name,
-                           assignment_names=data.assignment_names,
-                           col_keys=data.assignment_paths,
-                           rows=data.responses)
+    return render_template(
+        'index.html',
+        org_fullname=data.source_repo.owner.fullname,
+        org_login=data.source_repo.owner.login,
+        repo_name=data.source_repo.name,
+        assignments=enumerate(data.assignment_names),
+        col_keys=data.assignment_paths,
+        rows=data.responses)
+
+
+@app.route('/assignment/<assignment_id>/combined')
+def combined_assignment(assignment_id):
+    session = Session()
+    data = get_assignment_data(session)
+    assignment_path = data.assignment_paths[int(assignment_id)]
+
+    files = session.query(FileCommit).filter(FileCommit.path == assignment_path).options(joinedload(FileCommit.repo)).all()
+    nbs = {file.repo.owner.login: safe_read_notebook(file.file_content.content.decode(), clear_outputs=True)
+           for file in files
+           if file.file_content}
+    owner_nb = nbs[data.source_repo.owner.login]
+    student_nbs = {owner: nb for owner, nb in nbs.items() if owner != data.source_repo.owner.login and nb}
+    combined_nb = nb_combine(owner_nb, student_nbs)
+    return HTMLExporter().from_notebook_node(combined_nb)
+
+
+# under development
+@app.route('/assignment/<assignment_id>')
+def assignment(assignment_id):
+    data = get_assignment_data()
+    assignment_name = data.assignment_names[int(assignment_id)]
+    assignment_path = data.assignment_paths[int(assignment_id)]
+    # missing = [owner for owner, nb in nbs.items() if not nb]
+    return render_template(
+        'assignment.html',
+        classroom_repo=data.source_repo,
+        classroom_owner=data.source_repo.owner,
+        assignment_name=assignment_name,
+        assignment_path=assignment_path,
+        assignment_id=assignment_id
+    )
 
 
 if __name__ == '__main__':
