@@ -11,15 +11,11 @@ Adapted by Oliver Steele
 # TODO backport to olin-computing/classroom-tools, and include via submodule or package
 # TODO adding and parsing the cell metadata is messy. It dates from when the nb author supplied this
 
-import json
 import re
 from collections import OrderedDict
 from copy import deepcopy
-from json import JSONDecodeError
 
 import Levenshtein
-# The extractor
-#
 import nbformat
 from cached_property import cached_property
 from numpy import argmin
@@ -40,9 +36,9 @@ def nb_add_metadata(nb, owner=None):
         nb['metadata']['owner'] = owner
     for cell in nb['cells']:
         if cell['cell_type'] == 'markdown' and cell['source']:
-            if re.match(QUESTION_RE, cell['source'][0], re.IGNORECASE):
+            if re.match(QUESTION_RE, cell['source'], re.IGNORECASE):
                 cell['metadata']['is_question'] = True
-            elif re.match(POLL_RE, cell['source'][0], re.IGNORECASE):
+            elif re.match(POLL_RE, cell['source'], re.IGNORECASE):
                 cell['metadata']['is_question'] = True
                 cell['metadata']['is_poll'] = True
     return nb
@@ -50,8 +46,8 @@ def nb_add_metadata(nb, owner=None):
 
 def safe_read_notebook(string, owner=None, clear_outputs=False):
     try:
-        nb = json.loads(string)
-    except JSONDecodeError:
+        nb = nbformat.reads(string, as_version=4)
+    except nbformat.reader.NotJSONError:
         return None
     nb = nb_add_metadata(nb, owner)
     if clear_outputs:
@@ -66,6 +62,8 @@ def nb_combine(template_notebook, student_notebooks):
     return nbe.get_combined_notebook()
 
 
+# The extractor
+#
 
 class NotebookExtractor(object):
     """The top-level class for extracting answers from a notebook.
@@ -94,7 +92,7 @@ class NotebookExtractor(object):
             is_final_cell = idx + 1 == len(self.template['cells'])
             metadata = cell['metadata']
             if metadata.get('is_question', False):
-                cell_source = ''.join(cell['source'])
+                cell_source = cell['source']
                 if prev_prompt is not None:
                     prompts[-1].stop_md = cell_source
                 is_poll = metadata.get('is_poll', 'Reading Journal feedback' in cell_source.split('\n')[0])
@@ -151,7 +149,7 @@ class NotebookExtractor(object):
         # sort_responses = not self.include_usernames
         # if sort_responses:
         #     def cell_slines_length(response_cells):
-        #         return len('\n'.join(''.join(cell['source']) for cell in response_cells).strip())
+        #         return len('\n'.join(cell['source') for cell in response_cells).strip())
         #     for prompt in self.question_prompts:
         #         prompt.answers = OrderedDict(sorted(prompt.answers.items(), key=lambda t: cell_slines_length(t[1])))
 
@@ -172,7 +170,7 @@ class NotebookExtractor(object):
 
         answer_book = deepcopy(self.template)
         answer_book['cells'] = filtered_cells
-        return nbformat.reads(json.dumps(nbformat.from_dict(answer_book)), as_version=4)
+        return answer_book
 
     def report_missing_answers(self):
         mandatory_questions = [prompt for prompt in self.question_prompts
@@ -215,7 +213,7 @@ class QuestionPrompt(object):
         answers = dict(self.answers)
         answer_strings = set()  # answers to this question, as strings; used to avoid duplicates
         for username, response_cells in self.answers.items():
-            answer_string = '\n'.join(''.join(cell['source']) for cell in response_cells).strip()
+            answer_string = '\n'.join(cell['source'] for cell in response_cells).strip()
             if answer_string in answer_strings:
                 del answers[username]
             else:
@@ -244,7 +242,7 @@ class QuestionPrompt(object):
         If no match is better than the matching_threshold, the empty list will be returned.
         """
         return_value = []
-        distances = [Levenshtein.distance(self.start_md, ''.join(cell['source']))
+        distances = [Levenshtein.distance(self.start_md, cell['source'])
                      for cell in cells]
         if min(distances) > matching_threshold:
             return return_value
@@ -255,7 +253,7 @@ class QuestionPrompt(object):
         elif len(self.stop_md) == 0:
             end_offset = len(cells) - best_match
         else:
-            distances = [Levenshtein.distance(self.stop_md, ''.join(cell['source']))
+            distances = [Levenshtein.distance(self.stop_md, cell['source'])
                          for cell in cells[best_match:]]
             if min(distances) > matching_threshold:
                 return return_value
@@ -283,4 +281,4 @@ class NotebookUtils(object):
 
     @staticmethod
     def cell_list_text(cells):
-        return ''.join(s for cell in cells for s in cell['source']).strip()
+        return ''.join(cell['source'] for cell in cells).strip()
