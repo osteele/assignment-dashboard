@@ -41,14 +41,20 @@
           </div>
 
           <div role="tabpanel" class="tab-pane active" id="collation">
-            <div class="xtext-center">
-              <div class="btn-group" role="toolbar">
-                <a type="button" class="btn btn-default" title="download notebook" href="{{ collated_nb_download_url }}">
-                  Download <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                </a>
+
+
+            <div class="row">
+              <div class="col-md-10 col-md-offset-1 content">
+                <h1><small>{{ assignment_path }}
+                  <a type="button" class="btn btn-default" title="download notebook" href="{{ collated_nb_download_url }}">
+                    Download <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                  </a>
+                </small></h1>
+
+                <iframe src="{{ collated_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
               </div>
             </div>
-            <iframe src="{{ collated_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+
           </div>
 
           <div role="tabpanel" class="tab-pane" id="summary">..2.</div>
