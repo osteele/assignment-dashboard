@@ -11,10 +11,10 @@ from sqlalchemy.orm import joinedload
 
 from globals import PYNB_MIME_TYPE
 from models import FileCommit, Repo, Session
-from nb_combine import nb_combine, safe_read_notebook
+from nb_combine import NotebookExtractor, safe_read_notebook
 
 RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
-AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb')
+AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
 
 session = Session()
 
@@ -87,4 +87,5 @@ def get_combined_notebook(assignment_id):
            if fc.file_content}
     owner_nb = nbs[model.source_repo.owner.login]
     student_nbs = {owner: nb for owner, nb in nbs.items() if owner != model.source_repo.owner.login and nb}
-    return AssignmentModel(assignment_path, nb_combine(owner_nb, student_nbs))
+    collation = NotebookExtractor(owner_nb, student_nbs)
+    return AssignmentModel(assignment_path, collation.get_combined_notebook(), collation.report_missing_answers())

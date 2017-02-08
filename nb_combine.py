@@ -173,17 +173,8 @@ class NotebookExtractor(object):
         return answer_book
 
     def report_missing_answers(self):
-        mandatory_questions = [prompt for prompt in self.question_prompts
-                               if not prompt.is_poll and not prompt.is_optional]
-        for prompt in mandatory_questions:
-            unanswered = sorted((username, status)
-                                for username, status in prompt.answer_status.items()
-                                if status != 'answered')
-            for username, status in unanswered:
-                print("{status} {prompt_name}: {username}".format(
-                    status=status.capitalize(),
-                    prompt_name=prompt.name,
-                    username=username))
+        return [(prompt.name, prompt.answer_status) for prompt in self.question_prompts
+                if not prompt.is_poll and not prompt.is_optional]
 
 
 class QuestionPrompt(object):

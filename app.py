@@ -5,8 +5,7 @@ from flask import Flask, make_response, render_template, url_for
 from nbconvert import HTMLExporter
 
 from globals import PYNB_MIME_TYPE
-from viewmodel import (get_assignment_notebook, get_combined_notebook,
-                       get_repo_forks_model)
+from viewmodel import get_assignment_notebook, get_combined_notebook, get_repo_forks_model
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -30,9 +29,10 @@ def empty():
 
 @app.route('/assignment/<assignment_id>')
 def assignment(assignment_id):
+    assignment_id = int(assignment_id)
     model = get_repo_forks_model()
-    assignment_name = model.assignment_names[int(assignment_id)]
-    assignment_path = model.assignment_paths[int(assignment_id)]
+    assignment_name = model.assignment_names[assignment_id]
+    assignment_path = model.assignment_paths[assignment_id]
     # missing = [owner for owner, nb in nbs.items() if not nb]
     return render_template(
         'assignment.html',
@@ -40,6 +40,7 @@ def assignment(assignment_id):
         classroom_repo=model.source_repo,
         assignment_name=assignment_name,
         assignment_path=assignment_path,
+        assignment_id=assignment_id,
         assignment_nb_html_url=url_for('assignment_notebook', assignment_id=assignment_id),
         collated_nb_html_url=url_for('combined_assignment', assignment_id=assignment_id),
         collated_nb_download_url=url_for('download_combined_assignment', assignment_id=assignment_id),
@@ -66,6 +67,18 @@ def download_combined_assignment(assignment_id):
     response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % collated_nb_name
     response.headers['Content-Type'] = PYNB_MIME_TYPE
     return response
+
+
+@app.route('/assignment/<assignment_id>/answer_status.html')
+def assignment_answer_status(assignment_id):
+    assignment_id = int(assignment_id)
+    status = get_combined_notebook(assignment_id).answer_status
+    return render_template(
+        '_answer_status.html',
+        q_names=[a for a, _ in status],
+        s_logins=sorted(status[0][1].keys() if status else []),
+        q_status=status
+    )
 
 
 if __name__ == '__main__':
