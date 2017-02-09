@@ -22,6 +22,8 @@ from utils import find_or_create, upsert_all
 # Globals
 #
 
+REPO_LIMIT = None  #4
+COMMIT_LIMIT = None  #20
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 if not GITHUB_API_TOKEN:
@@ -35,10 +37,10 @@ source_repo_name = 'sd17spring/ReadingJournal'
 organization_name = source_repo_name.split('/')[0]
 
 
-# get the repos
+# read the repos
 #
 
-print('reading team logins')
+print('fetching team logins')
 instructor_logins = {user.login for team in gh.get_organization(organization_name).get_teams() for user in team.get_members()}
 
 print('fetching repos')
@@ -49,8 +51,7 @@ repos = [source_repo] + student_repos
 if REPO_LIMIT:
     repos = repos[:REPO_LIMIT]
 
-
-# students
+# read and update students
 #
 
 print('updating students')
@@ -66,7 +67,7 @@ user_instances = list(session.query(User).filter(User.login.in_([repo.owner.logi
 user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
 
 
-# repos
+# update repos
 #
 
 def instance_for_repo(repo):
@@ -139,6 +140,10 @@ repo_commits = [(repo, commit)
                 for repo in repos
                 for commit in repo.get_commits()
                 if commit.sha not in logged_commit_shas]
+
+if COMMIT_LIMIT:
+    repo_commits = repo_commits[:COMMIT_LIMIT]
+
 print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
 
 # Use a dict, to record only the latest commit for each file
