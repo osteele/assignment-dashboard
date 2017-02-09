@@ -1,16 +1,18 @@
-"""
-Implements the View-Model of an MVVM architecture.
+""""
+"Implements the View-Model of an MVVM architecture.
 """
 
+import hashlib
+import pickle
 import re
 from collections import namedtuple
 
 import arrow
 import nbformat
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, undefer
 
 from globals import PYNB_MIME_TYPE
-from models import FileCommit, Repo, Session
+from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, FileContent, Repo, Session
 from nb_combine import NotebookExtractor, safe_read_notebook
 
 RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
@@ -31,6 +33,7 @@ def update_content_types(file_contents):
 
 def get_repo_forks_model():
     source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
+    assert source_repo
 
     # source_repo.fork(lazy='joined') doesn't work :-()
     repos = session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(source_repo.id)).all()
@@ -70,22 +73,66 @@ def get_repo_forks_model():
         responses=responses)
 
 
+def get_assignment(assignment_id):
+    session.rollback()
+    source_repo = session.query(Repo).options(joinedload(Repo.files)).filter(Repo.source_id.is_(None)).first()
+    assert source_repo
+    assignemnt_paths = sorted({fc.path for fc in source_repo.files if fc.path.endswith('.ipynb')})
+    assignment_path = assignemnt_paths[assignment_id]
+
+    files = session.query(FileCommit).filter(FileCommit.path == assignment_path)
+    files_hash = hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
+
+    assignment = session.query(Assignment).\
+        options(joinedload(Assignment.questions)).\
+        filter(Assignment.path == assignment_path). \
+        first()
+    if assignment and assignment.md5 == files_hash:
+        return assignment
+    if assignment:
+        session.delete(assignment)
+
+    # .options(undefer(FileCommit.file_content.content)) \
+    file_commits = session.query(FileCommit) \
+        .options(joinedload(FileCommit.repo)) \
+        .options(joinedload(FileCommit.file_content)) \
+        .filter(FileCommit.path == assignment_path)
+    nbs = {fc.repo.owner.login: safe_read_notebook(fc.content.decode(), clear_outputs=True)
+           for fc in file_commits
+           if fc.file_content}
+
+    owner_nb = nbs[source_repo.owner.login]
+    student_nbs = {owner: nb for owner, nb in nbs.items() if nb and owner != source_repo.owner.login}
+    assert owner_nb
+
+    collation = NotebookExtractor(owner_nb, student_nbs)
+    answer_status = collation.report_missing_answers()
+
+    student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
+    questions = [AssignmentQuestion(assignment_id=assignment_id,
+                                    question_order=question_index,
+                                    question_name=question_name,
+                                    responses=[AssignmentQuestionResponse(user_id=student_login_ids[login],
+                                                                          status=status)
+                                               for login, status in d.items()])
+                 for question_index, (question_name, d) in enumerate(answer_status)]
+    assignment = Assignment(repo_id=source_repo.id,
+                            path=assignment_path,
+                            nb_content=nbformat.writes(collation.get_combined_notebook()),
+                            questions=questions,
+                            md5=files_hash)
+    session.add(assignment)
+    session.commit()
+    return assignment
+
+
 def get_assignment_notebook(assignment_id):
-    source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
-    assignemnt_fcs = sorted({fc for fc in source_repo.files if fc.path.endswith('.ipynb')}, key=lambda fc: fc.path)
-    fc = assignemnt_fcs[assignment_id]
-    return nbformat.reads(fc.file_content.content, as_version=4)
+    assignment = get_assignment(assignment_id)
+    return nbformat.reads(assignment.nb_content, 4)
 
 
 def get_combined_notebook(assignment_id):
-    model = get_repo_forks_model()
-    assignment_path = model.assignment_paths[assignment_id]
-
-    files = session.query(FileCommit).filter(FileCommit.path == assignment_path).options(joinedload(FileCommit.repo)).all()
-    nbs = {fc.repo.owner.login: safe_read_notebook(fc.file_content.content.decode(), clear_outputs=True)
-           for fc in files
-           if fc.file_content}
-    owner_nb = nbs[model.source_repo.owner.login]
-    student_nbs = {owner: nb for owner, nb in nbs.items() if owner != model.source_repo.owner.login and nb}
-    collation = NotebookExtractor(owner_nb, student_nbs)
-    return AssignmentModel(assignment_path, collation.get_combined_notebook(), collation.report_missing_answers())
+    assignment = get_assignment(assignment_id)
+    answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})
+                     for question in assignment.questions]
+    return AssignmentModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)

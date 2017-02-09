@@ -3,14 +3,18 @@ import os
 from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint,
                         create_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import deferred, relationship, sessionmaker
+from sqlalchemy.orm import backref, deferred, relationship, sessionmaker
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
+MD5_HASH_CONSTRAINT = CheckConstraint('length(md5) = 32')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
 
 Base = declarative_base()
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, echo=bool(os.environ.get('LOG_SQL', False)))
 Session = sessionmaker(bind=engine)
+
+# These mirror GitHub
+#
 
 
 class FileCommit(Base):
@@ -90,3 +94,53 @@ class Commit(Base):
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
+
+
+# Assignment-related models
+#
+
+class Assignment(Base):
+    __tablename__ = 'assignment'
+    __table_args__ = (UniqueConstraint('repo_id', 'path'),)
+
+    id = Column(Integer, primary_key=True)
+    repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
+    path = Column(String(1024), nullable=False)
+    nb_content = deferred(Column(Text, nullable=True))
+    md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=False)
+
+    def __repr__(self):
+        return "<Assignment %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'repo_id', 'path'])
+
+
+class AssignmentQuestion(Base):
+    __tablename__ = 'assignment_question'
+    __table_args__ = (UniqueConstraint('assignment_id', 'question_order'),)
+
+    id = Column(Integer, primary_key=True)
+    assignment_id = Column(Integer, ForeignKey('assignment.id'), nullable=False)
+    question_order = Column(Integer, nullable=False)
+    question_name = Column(String(1024))
+    notebook_data = deferred(Column(Text, nullable=True))
+
+    assignment = relationship('Assignment', backref=backref('questions', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return "<AssignmentQuestion %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'assignment_id', 'repo_id', 'path'])
+
+
+class AssignmentQuestionResponse(Base):
+    __tablename__ = 'assignment_question_response'
+    __table_args__ = (UniqueConstraint('assignment_question_id', 'user_id'),)
+
+    id = Column(Integer, primary_key=True)
+    assignment_question_id = Column(Integer, ForeignKey('assignment_question.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    status = Column(String(20))
+    notebook_data = deferred(Column(Text, nullable=True))
+
+    question = relationship('AssignmentQuestion', backref=backref('responses', cascade='all, delete-orphan'))
+    user = relationship('User')
+
+    def __repr__(self):
+        return "<AssignmentQuestionResponse %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'assignment_question_id', 'user_id'])

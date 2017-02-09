@@ -173,6 +173,9 @@ class NotebookExtractor(object):
         return answer_book
 
     def report_missing_answers(self):
+        if not self._processed:
+            self._process()
+
         return [(prompt.name, prompt.answer_status) for prompt in self.question_prompts
                 if not prompt.is_poll and not prompt.is_optional]
 
