@@ -1,7 +1,7 @@
 import os
 
-from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey,
-                        Integer, String, Text, UniqueConstraint, create_engine)
+from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint,
+                        create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import deferred, relationship, sessionmaker
 
@@ -26,6 +26,10 @@ class FileCommit(Base):
     file_content = relationship('FileContent', backref='files')
     repo = relationship('Repo', backref='files')
 
+    @property
+    def content(self):
+        return self.file_content.content
+
     def __repr__(self):
         return "<FileCommit %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'])
 
@@ -45,7 +49,10 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     login = Column(String(100), nullable=False, index=True, unique=True)
     fullname = Column(String(100))
+    avatar_url = Column(String(1024))
+
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
+    status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
 
     file_commits = relationship('Repo', backref='owner')
 

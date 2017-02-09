@@ -43,22 +43,26 @@ instructor_logins = {user.login for team in gh.get_organization(organization_nam
 
 print('fetching repos')
 source_repo = gh.get_repo(source_repo_name)
-student_repos = sorted((repo for repo in source_repo.get_forks()
-                        if repo.owner.login not in instructor_logins),
-                       key=lambda repo: repo.owner.login.lower())
-all_repos = [source_repo] + student_repos
+student_repos = [repo for repo in source_repo.get_forks()
+                 if repo.owner.login not in instructor_logins]
+repos = [source_repo] + student_repos
+if REPO_LIMIT:
+    repos = repos[:REPO_LIMIT]
 
 
 # students
 #
 
 print('updating students')
-students = [User(login=repo.owner.login, fullname=repo.owner.name, role='organization' if repo == source_repo else 'student')
-            for repo in all_repos]
-upsert(session, students, User.login)
+students = [User(login=repo.owner.login,
+                 fullname=repo.owner.name,
+                 avatar_url=repo.owner.avatar_url or repo.owner.gravatar_url,
+                 role='organization' if repo == source_repo else 'student')
+            for repo in repos]
+upsert_all(session, students, User.login)
 session.commit()
 
-user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in all_repos])))
+user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in repos])))
 user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
 
 
@@ -75,7 +79,7 @@ session.commit()
 assert source_repo_instance.id
 
 repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
-                  for repo in all_repos
+                  for repo in repos
                   if repo != source_repo]
 upsert(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
 session.commit()
@@ -101,7 +105,7 @@ def is_downloadable(item):
 print('updating file content')
 
 file_hashes = {item.sha: (repo, item)
-               for repo in all_repos
+               for repo in repos
                for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
                if item.type == 'blob'}
 
@@ -132,7 +136,7 @@ logged_commit_shas = {sha for sha, in session.query(Commit.sha)}  # TODO restric
 print('fetching commits')
 
 repo_commits = [(repo, commit)
-                for repo in all_repos
+                for repo in repos
                 for commit in repo.get_commits()
                 if commit.sha not in logged_commit_shas]
 print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
