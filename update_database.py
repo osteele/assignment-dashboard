@@ -22,8 +22,8 @@ from utils import find_or_create, upsert_all
 # Globals
 #
 
-REPO_LIMIT = None  #4
-COMMIT_LIMIT = None  #20
+REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
+COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 if not GITHUB_API_TOKEN:
