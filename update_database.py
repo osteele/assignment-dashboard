@@ -17,7 +17,7 @@ from github import Github
 from sqlalchemy.sql.expression import func
 
 from models import Commit, FileCommit, FileContent, Repo, Session, User
-from utils import find_or_create, upsert
+from utils import find_or_create, upsert_all
 
 # Globals
 #
@@ -81,7 +81,7 @@ assert source_repo_instance.id
 repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
                   for repo in repos
                   if repo != source_repo]
-upsert(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
+upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
 session.commit()
 
 repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
@@ -116,8 +116,8 @@ file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) 
                  if item.sha not in db_file_contents or is_downloadable(item) and db_file_contents[item.sha] is None]
 print('downloaded %d files' % sum(bool(fc.content) for fc in file_contents))
 
-upsert(session, file_contents, FileContent.sha)
-session.commit()  # TODO remove this; commit with next transaction
+upsert_all(session, file_contents, FileContent.sha)
+session.commit()
 
 
 # update file commits
@@ -152,7 +152,7 @@ print('processing %d file commits' % len(file_commit_recs))
 file_commits = [FileCommit(repo_id=repo_id, path=path, mod_time=mod_time, sha=sha)
                 for (repo_id, path), (sha, mod_time) in file_commit_recs.items()]
 
-upsert(session, file_commits, FileCommit.repo_id, FileCommit.path)
+upsert_all(session, file_commits, FileCommit.repo_id, FileCommit.path)
 session.commit()
 
 
@@ -161,5 +161,5 @@ session.commit()
 
 commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
                     for repo, commit in repo_commits]
-upsert(session, commit_instances, Commit.repo_id, Commit.sha)
+upsert_all(session, commit_instances, Commit.repo_id, Commit.sha)
 session.commit()

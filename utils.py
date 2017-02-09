@@ -10,7 +10,7 @@ def find_or_create(session, model, **kwargs):
         return instance
 
 
-def upsert(session, instances, *key_attrs):
+def upsert_all(session, instances, *key_attrs):
     """Merge or add instances to the session.
 
     Instance are merged if the database contains a row with the same values for key_attrs.
@@ -19,8 +19,8 @@ def upsert(session, instances, *key_attrs):
     if not instances:
         return
     if len(instances) > MAX_ROWS:
-        upsert(session, instances[:MAX_ROWS], *key_attrs)
-        upsert(session, instances[MAX_ROWS:], *key_attrs)
+        upsert_all(session, instances[:MAX_ROWS], *key_attrs)
+        upsert_all(session, instances[MAX_ROWS:], *key_attrs)
         return
 
     assert(key_attrs)
