@@ -1,14 +1,41 @@
 import os
 
+import click
 import nbformat
 from flask import Flask, make_response, render_template, url_for
 from nbconvert import HTMLExporter
 
+import database
 from globals import PYNB_MIME_TYPE
 from viewmodel import get_assignment_notebook, get_combined_notebook, get_repo_forks_model
 
 app = Flask(__name__, static_url_path='/static')
 
+
+# Commands
+#
+
+@app.cli.command()
+def initdb():
+    click.echo('Initialize the database.')
+    database.initdb()
+
+
+@app.cli.command()
+@click.option('--repo-limit', help='Limit the number of repos.')
+@click.option('--commit-limit', help='Limit the number of commits.')
+@click.option('--repo', help='The name of the repo in org/name format')
+def updatedb(**kwargs):
+    click.echo('Update database.')
+    for k, v in kwargs.items():
+        if v is not None:
+            os.environ[k.upper()] = v
+    # TODO turn update_database.py into a module function, and call this instead
+    import update_database
+
+
+# Routes
+#
 
 @app.route('/')
 def home_page():

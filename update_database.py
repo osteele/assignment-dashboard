@@ -33,7 +33,7 @@ gh = Github(GITHUB_API_TOKEN)
 
 session = Session()
 
-source_repo_name = 'sd17spring/ReadingJournal'
+source_repo_name = os.environ.get('REPO', 'sd17spring/ReadingJournal')
 organization_name = source_repo_name.split('/')[0]
 
 

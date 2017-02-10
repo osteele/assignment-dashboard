@@ -37,7 +37,7 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 4. Initialize the database
 
-    $ ./scripts/reset_database
+    $ FLASK_APP=app.py flask initdb
 
 
 ## Usage
@@ -45,17 +45,17 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 The code has two components. The updater updates the project database from GitHub.
 The web application browses the data in this database.
 
+
 ### Update the database
 
-    $ python update_database.py
+    $ FLASK_APP=app.py python updatedb
 
 This picks up new commits.
 
-### Run the Web App
 
-Launch Flask:
+### Run the Web Application
 
-    $ python3 app.py
+    $ FLASK_APP=app.py flask run
 
 Then browse to <http://localhost:4000>.
 
