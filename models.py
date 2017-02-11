@@ -13,6 +13,7 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL, echo=bool(os.environ.get('LOG_SQL', False)))
 Session = sessionmaker(bind=engine)
 
+
 # These mirror GitHub
 #
 
@@ -35,7 +36,7 @@ class FileCommit(Base):
         return self.file_content.content
 
     def __repr__(self):
-        return "<FileCommit %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'])
+        return "<FileCommit %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'] if k)
 
 
 class FileContent(Base):
@@ -61,7 +62,7 @@ class User(Base):
     file_commits = relationship('Repo', backref='owner')
 
     def __repr__(self):
-        return "<User %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'login', 'role'])
+        return "<User %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'login', 'role'] if k)
 
 
 class Repo(Base):
@@ -79,7 +80,7 @@ class Repo(Base):
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
 
     def __repr__(self):
-        return "<Repo %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'])
+        return "<Repo %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'] if k)
 
     @property
     def html_url(self):
@@ -100,20 +101,28 @@ class Commit(Base):
 #
 
 class Assignment(Base):
+    """A single assignment file within a repo that contains multiple assignments,
+    one per file."""
+
     __tablename__ = 'assignment'
     __table_args__ = (UniqueConstraint('repo_id', 'path'),)
 
     id = Column(Integer, primary_key=True)
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     path = Column(String(1024), nullable=False)
+    name = Column(String(128), nullable=True)
     nb_content = deferred(Column(Text, nullable=True))
     md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=False)
+    md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=True)
+
 
     def __repr__(self):
-        return "<Assignment %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'repo_id', 'path'])
+        return "<Assignment %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'repo_id', 'path'] if k)
 
 
 class AssignmentQuestion(Base):
+    """A question within an assignment."""
+
     __tablename__ = 'assignment_question'
     __table_args__ = (UniqueConstraint('assignment_id', 'question_order'),)
 
@@ -126,7 +135,7 @@ class AssignmentQuestion(Base):
     assignment = relationship('Assignment', backref=backref('questions', cascade='all, delete-orphan'))
 
     def __repr__(self):
-        return "<AssignmentQuestion %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'assignment_id', 'repo_id', 'path'])
+        return "<AssignmentQuestion %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'assignment_id', 'repo_id', 'path'] if k)
 
 
 class AssignmentQuestionResponse(Base):
@@ -143,4 +152,4 @@ class AssignmentQuestionResponse(Base):
     user = relationship('User')
 
     def __repr__(self):
-        return "<AssignmentQuestionResponse %s>" % ' '.join('%s=%s' % (k, getattr(self, k)) for k in ['id', 'assignment_question_id', 'user_id'])
+        return "<AssignmentQuestionResponse %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'assignment_question_id', 'user_id'] if k)
