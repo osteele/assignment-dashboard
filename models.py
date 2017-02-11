@@ -2,16 +2,16 @@ import os
 
 from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint,
                         create_engine)
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, deferred, relationship, sessionmaker
+
+from database import Base
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 MD5_HASH_CONSTRAINT = CheckConstraint('length(md5) = 32')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
 
-Base = declarative_base()
-engine = create_engine(DATABASE_URL, echo=bool(os.environ.get('LOG_SQL', False)))
-Session = sessionmaker(bind=engine)
+# engine = create_engine(DATABASE_URL, echo=bool(os.environ.get('LOG_SQL', False)))
+# Session = sessionmaker(bind=engine)
 
 
 # These mirror GitHub

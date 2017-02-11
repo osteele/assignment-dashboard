@@ -16,7 +16,8 @@ import arrow
 from github import Github
 from sqlalchemy.sql.expression import func
 
-from models import Commit, FileCommit, FileContent, Repo, Session, User
+from database import session
+from models import Commit, FileCommit, FileContent, Repo, User
 from utils import find_or_create, upsert_all
 
 # Globals
@@ -33,8 +34,6 @@ if not GITHUB_API_TOKEN:
     print("warning: GITHUB_API_TOKEN is not defined. API calls are rate-limited.", file=sys.stderr)
 
 gh = Github(GITHUB_API_TOKEN)
-
-session = Session()
 
 source_repo_name = os.environ.get('REPO', 'sd17spring/ReadingJournal')
 organization_name = source_repo_name.split('/')[0]

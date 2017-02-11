@@ -11,13 +11,12 @@ import arrow
 import nbformat
 from sqlalchemy.orm import joinedload
 
+from database import session
 from globals import PYNB_MIME_TYPE
-from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo, Session
+from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
 from nb_combine import NotebookExtractor, safe_read_notebook
 
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
-
-session = Session()
 
 
 def get_source_repos():
