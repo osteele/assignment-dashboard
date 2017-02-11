@@ -112,9 +112,9 @@ class Assignment(Base):
     path = Column(String(1024), nullable=False)
     name = Column(String(128), nullable=True)
     nb_content = deferred(Column(Text, nullable=True))
-    md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=False)
     md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=True)
 
+    repo = relationship('Repo', backref=backref('assignments', cascade='all, delete-orphan'))
 
     def __repr__(self):
         return "<Assignment %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'repo_id', 'path'] if k)

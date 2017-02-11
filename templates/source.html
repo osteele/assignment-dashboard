@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}{{ classroom_owner.login }}/{{ classroom_repo.name }}{% endblock %}
+
+{% block breadcrumbs %}
+  <nav class="navbar navbar-fixed-top">
+    <ol class="breadcrumb">
+      <li>{{ classroom_owner.login }}</li>
+    </ol>
+  </nav>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="jumbotron">
+      <div class="container">
+        <h1><small>{{ classroom_owner.login }} / {{ classroom_repo.name }}</small></h1>
+        <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ classroom_repo.name}} forks.</small></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <table class="table table-condensed table-striped">
+      <tr>
+        <th></th>
+        {% for assignment in assignments %}
+          <th><a href="{{ url_for('assignment', assignment_id=assignment.id) }}" title="View the combined notebook">{{ assignment.name or assignment.path }}</a></th>
+        {% endfor %}
+      </tr>
+
+      {% for row in student_responses %}
+        <tr>
+          <th><a href="{{ row.repo.html_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
+          {% for response in row.responses %}
+            <td class="{{ response.css_class }}">
+              <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="View the student file">
+                {{ response.mod_time }}
+              </a>
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+{% endblock %}

@@ -9,16 +9,19 @@ from collections import namedtuple
 
 import arrow
 import nbformat
-from sqlalchemy.orm import joinedload, undefer
+from sqlalchemy.orm import joinedload
 
 from globals import PYNB_MIME_TYPE
-from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, FileContent, Repo, Session
+from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo, Session
 from nb_combine import NotebookExtractor, safe_read_notebook
 
-RepoForksModel = namedtuple('RepoForksModel', 'source_repo assignment_names assignment_paths responses')
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
 
 session = Session()
+
+
+def get_source_repos():
+    return session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(None)).all()
 
 
 def update_content_types(file_contents):
@@ -31,17 +34,33 @@ def update_content_types(file_contents):
                 fc.content_type = ''
 
 
-def get_repo_forks_model():
-    source_repo = session.query(Repo).filter(Repo.source_id.is_(None)).first()
-    assert source_repo
+def compute_assignment_name(path):
+    NOTEBOOK_ASSIGNMENT_PATH_RE = r'day(\d+)_reading_journal\.ipynb'
+    NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE = r'Journal #\1'
+    return re.sub(NOTEBOOK_ASSIGNMENT_PATH_RE, NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE, path)
 
-    # source_repo.fork(lazy='joined') doesn't work :-()
-    repos = session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(source_repo.id)).all()
 
-    assignment_paths = sorted({file.path for file in source_repo.files if file.path.endswith('.ipynb')})
-    assignment_names = [re.sub(r'day(\d+)_reading_journal\.ipynb', r'Journal #\1', path) for path in assignment_paths]
+def update_repo_assignments(repo_id):
+    """Update the repo.assignments from its list of files. Returns a pair (assignment_repo, response_status)."""
+    assignment_repo = session.query(Repo). \
+        options(joinedload(Repo.assignments)). \
+        options(joinedload(Repo.files)). \
+        filter(Repo.id == repo_id).first()
+    assert assignment_repo
 
-    # instead of repo.files, to avoid 1 + N
+    # refresh the list of assignments
+    assignment_paths = {f.path for f in assignment_repo.files if f.path.endswith('.ipynb')}
+    saved_assignment_paths = set(assignment.path for assignment in assignment_repo.assignments)
+    if assignment_paths != saved_assignment_paths:
+        assert 0, 'make %s' % (assignment_paths - saved_assignment_paths)
+        map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
+        assignment_repo.assignments = [assignment for assignment in assignment_repo.assignments if assignment.path in assignment_paths]
+        assignment_repo.assignments.append([Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path))
+                                            for path in assignment_paths - saved_assignment_paths])
+        session.commit()
+
+    # instead of assignment_repo.files, to avoid 1 + N
+    # TODO filter to forks of source
     file_commits = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
     user_path_files = {(fc.repo.owner_id, fc.path): fc for fc in file_commits}
     update_content_types([fc.file_content for fc in file_commits if fc.file_content])
@@ -51,7 +70,7 @@ def get_repo_forks_model():
         if not file:
             return dict(css_class='danger', path=path, mod_time='missing')
         return dict(
-            css_class=('warning' if file.sha == user_path_files[source_repo.owner.id, file.path].sha
+            css_class=('warning' if file.sha == user_path_files[assignment_repo.owner.id, file.path].sha
                        else 'danger' if not file.file_content
                        else 'warning' if not file.file_content != 'PYNB_MIME_TYPE'
                        else None),
@@ -59,51 +78,60 @@ def get_repo_forks_model():
             path=path
         )
 
-    responses = [dict(user=repo.owner,
-                      repo=repo,
-                      responses=[file_presentation(user_path_files.get((repo.owner.id, path), None), path)
+    responses = [dict(user=student_repo.owner,
+                      repo=student_repo,
+                      responses=[file_presentation(user_path_files.get((student_repo.owner.id, path), None), path)
                                  for path in assignment_paths]
                       )
-                 for repo in repos]
+                 for student_repo in assignment_repo.forks]
 
-    return RepoForksModel(
-        source_repo=source_repo,
-        assignment_names=assignment_names,
-        assignment_paths=assignment_paths,
-        responses=responses)
+    return assignment_repo, responses
+
+
+def find_assignment(assignment_id):
+    """Return an Assignment. The associated repo and repo owner are eagerly loaded."""
+    assignment = session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).first()
+    assert assignment, "no assignment id=%s" % assignment_id
+    return assignment
 
 
 def get_assignment(assignment_id):
-    session.rollback()
-    source_repo = session.query(Repo).options(joinedload(Repo.files)).filter(Repo.source_id.is_(None)).first()
-    assert source_repo
-    assignemnt_paths = sorted({fc.path for fc in source_repo.files if fc.path.endswith('.ipynb')})
-    assignment_path = assignemnt_paths[assignment_id]
+    """Update an assignment's related AssignmentQuestions and AssignmentQuestionResponess.
 
-    files = session.query(FileCommit).filter(FileCommit.path == assignment_path)
+    Returns the assignment.
+    """
+    session.rollback()
+    # source_repo = session.query(Repo).options(joinedload(Repo.files)).filter(Repo.source_id.is_(None)).first()
+    # assert source_repo
+    # assignemnt_paths = sorted({fc.path for fc in source_repo.files if fc.path.endswith('.ipynb')})
+    # assignment_path = assignemnt_paths[assignment_id]
+
+    assignment = session.query(Assignment). \
+        options(joinedload(Assignment.questions)). \
+        options(joinedload(Assignment.repo).joinedload(Repo.owner)). \
+        filter(Assignment.id == assignment_id). \
+        first()
+    assert assignment, "no assignment id=%s" % assignment_id
+
+    files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
     files_hash = hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
 
-    assignment = session.query(Assignment).\
-        options(joinedload(Assignment.questions)).\
-        filter(Assignment.path == assignment_path). \
-        first()
     if assignment and assignment.md5 == files_hash:
         return assignment
-    if assignment:
-        session.delete(assignment)
 
     # .options(undefer(FileCommit.file_content.content)) \
     file_commits = session.query(FileCommit) \
         .options(joinedload(FileCommit.repo)) \
         .options(joinedload(FileCommit.file_content)) \
-        .filter(FileCommit.path == assignment_path)
-    nbs = {fc.repo.owner.login: safe_read_notebook(fc.content.decode(), clear_outputs=True)
-           for fc in file_commits
-           if fc.file_content}
+        .filter(FileCommit.path == assignment.path)
 
-    owner_nb = nbs[source_repo.owner.login]
-    student_nbs = {owner: nb for owner, nb in nbs.items() if nb and owner != source_repo.owner.login}
-    assert owner_nb
+    notebooks = {fc.repo.owner.login: safe_read_notebook(fc.content.decode(), clear_outputs=True)
+                 for fc in file_commits
+                 if fc.file_content}
+
+    student_nbs = {owner: nb for owner, nb in notebooks.items() if nb and owner != assignment.repo.owner.login}
+    assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
+    owner_nb = notebooks[assignment.repo.owner.login]
 
     collation = NotebookExtractor(owner_nb, student_nbs)
     answer_status = collation.report_missing_answers()
@@ -116,13 +144,17 @@ def get_assignment(assignment_id):
                                                                           status=status)
                                                for login, status in d.items()])
                  for question_index, (question_name, d) in enumerate(answer_status)]
-    assignment = Assignment(repo_id=source_repo.id,
-                            path=assignment_path,
-                            nb_content=nbformat.writes(collation.get_combined_notebook()),
-                            questions=questions,
-                            md5=files_hash)
+
+    assignment.questions = []
+    session.commit()
+
+    assignment.nb_content = nbformat.writes(collation.get_combined_notebook())
+    assignment.questions = questions,
+    assignment.md5 = files_hash
+
     session.add(assignment)
     session.commit()
+
     return assignment
 
 

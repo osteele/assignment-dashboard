@@ -2,12 +2,13 @@ import os
 
 import click
 import nbformat
-from flask import Flask, make_response, render_template, url_for
+from flask import Flask, make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
 import database
 from globals import PYNB_MIME_TYPE
-from viewmodel import get_assignment_notebook, get_combined_notebook, get_repo_forks_model
+from viewmodel import (find_assignment, get_assignment_notebook, get_combined_notebook, get_source_repos,
+                       update_repo_assignments)
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -30,22 +31,31 @@ def updatedb(**kwargs):
     for k, v in kwargs.items():
         if v is not None:
             os.environ[k.upper()] = v
-    # TODO turn update_database.py into a module function, and call this instead
-    import update_database
+    # TODO turn update_database.py into a module function, and call that instead
+    import update_database  # noqa: F401
 
 
 # Routes
 #
 
 @app.route('/')
-def home_page():
-    data = get_repo_forks_model()
+def index():
+    repos = get_source_repos()
+    if len(repos) == 1:
+        return redirect(url_for('source', repo_id=repos[0].id))
+    else:
+        return render_template('index.html', repos=repos)
+
+
+@app.route('/source/<repo_id>')
+def source(repo_id):
+    assignment_repo, responses = update_repo_assignments(repo_id)
     return render_template(
-        'index.html',
-        classroom_owner=data.source_repo.owner,
-        classroom_repo=data.source_repo,
-        assignments=enumerate(data.assignment_names),
-        student_responses=sorted(data.responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
+        'source.html',
+        classroom_owner=assignment_repo.owner,
+        classroom_repo=assignment_repo,
+        assignments=sorted(assignment_repo.assignments, key=lambda a: a.name or ''),
+        student_responses=sorted(responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
 
 
 # HTML from HTMLExporter.from_notebook_node requests this
@@ -56,38 +66,35 @@ def empty():
 
 @app.route('/assignment/<assignment_id>')
 def assignment(assignment_id):
-    assignment_id = int(assignment_id)
-    model = get_repo_forks_model()
-    assignment_name = model.assignment_names[assignment_id]
-    assignment_path = model.assignment_paths[assignment_id]
-    # missing = [owner for owner, nb in nbs.items() if not nb]
+    assignment = find_assignment(assignment_id)
+    assignment_repo = assignment.repo
     return render_template(
         'assignment.html',
-        classroom_owner=model.source_repo.owner,
-        classroom_repo=model.source_repo,
-        assignment_name=assignment_name,
-        assignment_path=assignment_path,
-        assignment_id=assignment_id,
-        assignment_nb_html_url=url_for('assignment_notebook', assignment_id=assignment_id),
-        collated_nb_html_url=url_for('combined_assignment', assignment_id=assignment_id),
-        collated_nb_download_url=url_for('download_combined_assignment', assignment_id=assignment_id),
+        classroom_owner=assignment_repo.owner,
+        classroom_repo=assignment_repo,
+        assignment_name=assignment.name,
+        assignment_path=assignment.path,
+        assignment_id=assignment.id,
+        assignment_nb_html_url=url_for('assignment_notebook', assignment_id=assignment.id),
+        collated_nb_html_url=url_for('combined_assignment', assignment_id=assignment.id),
+        collated_nb_download_url=url_for('download_combined_assignment', assignment_id=assignment.id),
     )
 
 
 @app.route('/assignment/<assignment_id>.ipynb.html')
 def assignment_notebook(assignment_id):
-    return HTMLExporter().from_notebook_node(get_assignment_notebook(int(assignment_id)))
+    return HTMLExporter().from_notebook_node(get_assignment_notebook(assignment_id))
 
 
 @app.route('/assignment/<assignment_id>/combined.ipynb.html')
 def combined_assignment(assignment_id):
-    model = get_combined_notebook(int(assignment_id))
+    model = get_combined_notebook(assignment_id)
     return HTMLExporter().from_notebook_node(model.collated_nb)
 
 
 @app.route('/assignment/<assignment_id>/combined.ipynb')
 def download_combined_assignment(assignment_id):
-    model = get_combined_notebook(int(assignment_id))
+    model = get_combined_notebook(assignment_id)
     collated_nb_name = '%s-combined.%s' % os.path.splitext(os.path.basename(model.assignment_path))
 
     response = make_response(nbformat.writes(model.collated_nb))
@@ -98,7 +105,6 @@ def download_combined_assignment(assignment_id):
 
 @app.route('/assignment/<assignment_id>/answer_status.html')
 def assignment_answer_status(assignment_id):
-    assignment_id = int(assignment_id)
     status = get_combined_notebook(assignment_id).answer_status
     return render_template(
         '_answer_status.html',
