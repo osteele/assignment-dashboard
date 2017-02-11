@@ -149,7 +149,7 @@ def get_assignment(assignment_id):
     session.commit()
 
     assignment.nb_content = nbformat.writes(collation.get_combined_notebook())
-    assignment.questions = questions,
+    assignment.questions = questions
     assignment.md5 = files_hash
 
     session.add(assignment)

@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ assignment_name }}{% endblock %}
+{% block title %}{{ assignment.name }}{% endblock %}
 
 {%block head %}
   <script>
@@ -12,8 +12,8 @@
 {% block breadcrumbs %}
   <ol class="breadcrumb">
     <li>{{ classroom_owner.login }}</li>
-    <li><a href="/">{{ classroom_repo.name }}</a></li>
-    <li>{{ assignment_name }}</li>
+    <li><a href="/">{{ assignment.repo.name }}</a></li>
+    <li>{{ assignment.name }}</li>
   </ol>
 {% endblock %}
 
@@ -29,26 +29,26 @@
         <!-- Tab panes -->
         <div class="tab-content">
           <div role="tabpanel" class="tab-pane" id="assignment">
-            <iframe src="{{ assignment_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+            <iframe src="{{ url_for('assignment_notebook', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
           </div>
 
           <div role="tabpanel" class="tab-pane active" id="collation">
             <div class="row">
               <div class="col-md-10 col-md-offset-1 content">
                 <h1><small>
-                  <a type="button" class="btn btn-default" title="download notebook" href="{{ collated_nb_download_url }}">
+                  <a type="button" class="btn btn-default" title="download notebook" href="{{ url_for('download_combined_assignment', assignment_id=assignment.id) }}">
                     Download <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
                   </a>
-                  {{ assignment_path }}
+                  {{ assignment.path }}
                 </small></h1>
 
-                <iframe src="{{ collated_nb_html_url }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+                <iframe src="{{ url_for('combined_assignment', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
               </div>
             </div>
           </div>
 
           <div role="tabpanel" class="tab-pane" id="summary">
-            <iframe src="{{ url_for('assignment_answer_status', assignment_id=assignment_id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+            <iframe src="{{ url_for('assignment_answer_status', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
           </div>
         </div>
 

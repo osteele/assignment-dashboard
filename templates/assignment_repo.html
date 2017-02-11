@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ classroom_owner.login }}/{{ classroom_repo.name }}{% endblock %}
+{% block title %}{{ assignment_repo.owner.login }}/{{ assignment_repo.name }}{% endblock %}
 
 {% block breadcrumbs %}
   <nav class="navbar navbar-fixed-top">
@@ -13,8 +13,8 @@
   <div class="container">
     <div class="jumbotron">
       <div class="container">
-        <h1><small>{{ classroom_owner.login }} / {{ classroom_repo.name }}</small></h1>
-        <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ classroom_repo.name}} forks.</small></p>
+        <h1><small>{{ assignment_repo.owner.login }} / {{ assignment_repo.name }}</small></h1>
+        <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}} forks.</small></p>
       </div>
     </div>
   </div>
