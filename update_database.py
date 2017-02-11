@@ -25,6 +25,9 @@ from utils import find_or_create, upsert_all
 REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 
+REPROCESS_COMMITS = False
+REPORT_FILE_SHAS = None  # 'day3_reading_journal.ipynb'
+
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 if not GITHUB_API_TOKEN:
     print("warning: GITHUB_API_TOKEN is not defined. API calls are rate-limited.", file=sys.stderr)
@@ -110,6 +113,13 @@ file_hashes = {item.sha: (repo, item)
                for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
                if item.type == 'blob'}
 
+if REPORT_FILE_SHAS:
+    print('file_hashes for %s' % REPORT_FILE_SHAS,
+          [(item.path, item.sha)
+           for repo in repos
+           for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
+           if REPORT_FILE_SHAS == REPORT_FILE_SHAS])
+
 db_file_contents = dict(session.query(FileContent.sha, func.length(FileContent.content)).filter(FileContent.sha.in_(file_hashes)))
 
 file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) if is_downloadable(item) else None)
@@ -139,10 +149,16 @@ print('fetching commits')
 repo_commits = [(repo, commit)
                 for repo in repos
                 for commit in repo.get_commits()
-                if commit.sha not in logged_commit_shas]
+                if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
+
 
 if COMMIT_LIMIT:
     repo_commits = repo_commits[:COMMIT_LIMIT]
+
+if REPORT_FILE_SHAS:
+    print('commits for %s:' % REPORT_FILE_SHAS, [item.sha for repo, commit in reversed(repo_commits)
+                                           for item in commit.files
+                                           if item.filename == REPORT_FILE_SHAS])
 
 print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
 
@@ -153,6 +169,9 @@ file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, pars
                     for item in commit.files}
 print('processing %d file commits' % len(file_commit_recs))
 
+if REPORT_FILE_SHAS:
+    print('filtered commits for %s:' % REPORT_FILE_SHAS,
+          [sha for (_, path), (sha, _) in file_commit_recs.items() if path == REPORT_FILE_SHAS])
 
 file_commits = [FileCommit(repo_id=repo_id, path=path, mod_time=mod_time, sha=sha)
                 for (repo_id, path), (sha, mod_time) in file_commit_recs.items()]
