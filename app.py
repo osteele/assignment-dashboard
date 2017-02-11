@@ -106,9 +106,3 @@ def assignment_answer_status(assignment_id):
         s_logins=sorted(status[0][1].keys() if status else []),
         q_status=status
     )
-
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    debug = 'PORT' not in os.environ
-    app.run(host='127.0.0.1' if debug else '0.0.0.0', debug=debug, port=port)
