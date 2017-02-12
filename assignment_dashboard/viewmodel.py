@@ -150,11 +150,6 @@ def get_assignment(assignment_id):
     return assignment
 
 
-def get_assignment_notebook(assignment_id):
-    assignment = get_assignment(assignment_id)
-    return nbformat.reads(assignment.nb_content, 4)
-
-
 def get_combined_notebook(assignment_id):
     assignment = get_assignment(assignment_id)
     answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})

@@ -6,8 +6,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .globals import PYNB_MIME_TYPE
-from .viewmodel import (find_assignment, get_assignment_notebook, get_combined_notebook, get_source_repos,
-                        update_repo_assignments)
+from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, update_repo_assignments
 
 
 # Routes
@@ -47,7 +46,9 @@ def assignment(assignment_id):
 
 @app.route('/assignment/<assignment_id>.ipynb.html')
 def assignment_notebook(assignment_id):
-    return HTMLExporter().from_notebook_node(get_assignment_notebook(assignment_id))
+    assignment = find_assignment(assignment_id)
+    nb = nbformat.reads(assignment.content, 4)
+    return HTMLExporter().from_notebook_node(nb)
 
 
 @app.route('/assignment/<assignment_id>/combined.ipynb.html')

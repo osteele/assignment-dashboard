@@ -110,9 +110,22 @@ class Assignment(Base):
     md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=True)
 
     repo = relationship('Repo', backref=backref('assignments', cascade='all, delete-orphan'))
+    # file = relationship('FileContent',
+    #                     primaryjoin=and_(Assignment.repo_id == FileCommit.repo_id, Assignment.path == FileCommit.path),
+    #                     foreign_keys=[repo_id, path])
 
     def __repr__(self):
         return "<Assignment %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'repo_id', 'path'] if k)
+
+    @property
+    def content(self):
+        # FIXME get `file` relationship above working; replace this query by that
+        from sqlalchemy.orm.session import object_session
+        fc = object_session(self).query(FileCommit). \
+            filter(FileCommit.repo_id). \
+            filter(self.repo_id and FileCommit.path == self.path). \
+            first()
+        return fc.content
 
 
 class AssignmentQuestion(Base):
