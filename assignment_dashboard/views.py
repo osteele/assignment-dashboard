@@ -4,10 +4,10 @@ import nbformat
 from flask import make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
-from app import app
-from globals import PYNB_MIME_TYPE
-from viewmodel import (find_assignment, get_assignment_notebook, get_combined_notebook, get_source_repos,
-                       update_repo_assignments)
+from . import app
+from .globals import PYNB_MIME_TYPE
+from .viewmodel import (find_assignment, get_assignment_notebook, get_combined_notebook, get_source_repos,
+                        update_repo_assignments)
 
 
 # Routes

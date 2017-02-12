@@ -11,10 +11,10 @@ import arrow
 import nbformat
 from sqlalchemy.orm import joinedload
 
-from database import session
-from globals import PYNB_MIME_TYPE
-from models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
-from nb_combine import NotebookExtractor, safe_read_notebook
+from .database import session
+from .globals import PYNB_MIME_TYPE
+from .models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
+from .nb_combine import NotebookExtractor, safe_read_notebook
 
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
 
@@ -49,13 +49,12 @@ def update_repo_assignments(repo_id):
 
     # refresh the list of assignments
     assignment_paths = {f.path for f in assignment_repo.files if f.path.endswith('.ipynb')}
-    saved_assignment_paths = set(assignment.path for assignment in assignment_repo.assignments)
-    if assignment_paths != saved_assignment_paths:
-        assert 0, 'make %s' % (assignment_paths - saved_assignment_paths)
+    saved_assignments = {assignment.path: assignment for assignment in assignment_repo.assignments}
+    if assignment_paths != set(saved_assignments):
         map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
-        assignment_repo.assignments = [assignment for assignment in assignment_repo.assignments if assignment.path in assignment_paths]
-        assignment_repo.assignments.append([Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path))
-                                            for path in assignment_paths - saved_assignment_paths])
+        assignment_repo.assignments = [(saved_assignments.get(path, None) or
+                                        Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path)))
+                                       for path in assignment_paths]
         session.commit()
 
     # instead of assignment_repo.files, to avoid 1 + N

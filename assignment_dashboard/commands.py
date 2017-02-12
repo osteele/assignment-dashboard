@@ -2,15 +2,15 @@ import os
 
 import click
 
-from app import app
-from database import db
+from . import app
+from .database import db
 
 
 @app.cli.command()
 def initdb():
     click.echo('Initialize the database.')
-    db.drop_all(engine)
-    db.create_all(engine)
+    db.drop_all()
+    db.create_all()
 
 
 @app.cli.command()
@@ -23,4 +23,4 @@ def updatedb(**kwargs):
         if v is not None:
             os.environ[k.upper()] = v
     # TODO turn update_database.py into a module function, and call that instead
-    import update_database  # noqa: F401
+    import assignment_dashboard.update_database  # noqa: F401

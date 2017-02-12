@@ -16,9 +16,9 @@ import arrow
 from github import Github
 from sqlalchemy.sql.expression import func
 
-from database import session
-from models import Commit, FileCommit, FileContent, Repo, User
-from utils import find_or_create, upsert_all
+from .database import session
+from .models import Commit, FileCommit, FileContent, Repo, User
+from .utils import find_or_create, upsert_all
 
 # Globals
 #
@@ -155,9 +155,10 @@ if COMMIT_LIMIT:
     repo_commits = repo_commits[:COMMIT_LIMIT]
 
 if REPORT_FILE_SHAS:
-    print('commits for %s:' % REPORT_FILE_SHAS, [item.sha for repo, commit in reversed(repo_commits)
-                                           for item in commit.files
-                                           if item.filename == REPORT_FILE_SHAS])
+    print('commits for %s:' % REPORT_FILE_SHAS,
+          [item.sha for repo, commit in reversed(repo_commits)
+           for item in commit.files
+           if item.filename == REPORT_FILE_SHAS])
 
 print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
 

@@ -1,17 +1,13 @@
 import os
 
-from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint,
-                        create_engine)
-from sqlalchemy.orm import backref, deferred, relationship, sessionmaker
+from sqlalchemy import CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import backref, deferred, relationship
 
-from database import Base
+from .database import Base
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 MD5_HASH_CONSTRAINT = CheckConstraint('length(md5) = 32')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
-
-# engine = create_engine(DATABASE_URL, echo=bool(os.environ.get('LOG_SQL', False)))
-# Session = sessionmaker(bind=engine)
 
 
 # These mirror GitHub
@@ -101,8 +97,7 @@ class Commit(Base):
 #
 
 class Assignment(Base):
-    """A single assignment file within a repo that contains multiple assignments,
-    one per file."""
+    """A single assignment file within a repo that contains multiple assignments, one per file."""
 
     __tablename__ = 'assignment'
     __table_args__ = (UniqueConstraint('repo_id', 'path'),)
@@ -110,7 +105,7 @@ class Assignment(Base):
     id = Column(Integer, primary_key=True)
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     path = Column(String(1024), nullable=False)
-    name = Column(String(128), nullable=True)
+    name = Column(String(128), nullable=False)
     nb_content = deferred(Column(Text, nullable=True))
     md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=True)
 

@@ -37,7 +37,7 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 4. Initialize the database
 
-    $ FLASK_APP=app.py flask initdb
+    $ FLASK_APP=assignment_dashboard flask initdb
 
 
 ## Usage
@@ -48,14 +48,14 @@ The web application browses the data in this database.
 
 ### Update the database
 
-    $ FLASK_APP=app.py python updatedb
+    $ FLASK_APP=assignment_dashboard python updatedb
 
 This picks up new commits.
 
 
 ### Run the Web Application
 
-    $ FLASK_APP=app.py flask run
+    $ FLASK_APP=assignment_dashboard flask run
 
 Then browse to <http://localhost:4000>.
 
