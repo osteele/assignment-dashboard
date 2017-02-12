@@ -49,15 +49,15 @@ def nb_clear_outputs(nb):
             cell['outputs'] = []
 
 
-def nb_combine(template_notebook, student_notebooks):
-    nbe = NotebookExtractor(template_notebook, student_notebooks)
+def nbcollate(template_notebook, student_notebooks):
+    nbe = NotebookCollator(template_notebook, student_notebooks)
     return nbe.get_combined_notebook()
 
 
 # The extractor
 #
 
-class NotebookExtractor(object):
+class NotebookCollator(object):
     """The top-level class for extracting answers from a notebook.
 
     TODO: add support multiple notebooks
@@ -117,7 +117,7 @@ class NotebookExtractor(object):
                 suppress_non_answer = bool(prompt.answers)
                 response_cells = \
                     prompt.get_closest_match(notebook_content['cells'],
-                                             NotebookExtractor.MATCH_THRESH,
+                                             NotebookCollator.MATCH_THRESH,
                                              suppress_non_answer)
                 if not response_cells:
                     status = 'missed'
