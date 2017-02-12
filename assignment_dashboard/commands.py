@@ -8,7 +8,7 @@ from .database import db
 
 @app.cli.command()
 def initdb():
-    click.echo('Initialize the database.')
+    click.echo('Initializing the database.')
     db.drop_all()
     db.create_all()
 
@@ -18,7 +18,7 @@ def initdb():
 @click.option('--commit-limit', help='Limit the number of commits.')
 @click.option('--repo', help='The name of the repo in org/name format')
 def updatedb(**kwargs):
-    click.echo('Update database.')
+    click.echo('Updating the database.')
     for k, v in kwargs.items():
         if v is not None:
             os.environ[k.upper()] = v

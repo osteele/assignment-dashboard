@@ -23,7 +23,7 @@ def upsert_all(session, instances, *key_attrs):
         upsert_all(session, instances[MAX_ROWS:], *key_attrs)
         return
 
-    assert(key_attrs)
+    assert key_attrs
     klass = instances[0].__class__
     instance_map = {tuple(getattr(instance, attr.key) for attr in key_attrs): instance
                     for instance in instances}
@@ -41,5 +41,10 @@ def upsert_all(session, instances, *key_attrs):
         for c in klass.__table__.columns:
             if c.key != 'id':
                 setattr(obj, c.key, getattr(instance, c.key))
-    print('%s: merged %d records; added %d records' % (klass.__name__, len(instances) - len(instance_map), len(instance_map)))
+
     session.add_all(instance_map.values())
+
+    counts = {"merged": len(instances) - len(instance_map), "added": len(instance_map)}
+    nonzero_counts = {k: v for k, v in counts.items() if v}
+    if nonzero_counts:
+        print('%s:' % klass.__name__, '; '.join("%s %d record(s)" % item for item in nonzero_counts.items()))
