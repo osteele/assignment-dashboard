@@ -98,12 +98,6 @@ def get_assignment(assignment_id):
 
     Returns the assignment.
     """
-    session.rollback()
-    # source_repo = session.query(Repo).options(joinedload(Repo.files)).filter(Repo.source_id.is_(None)).first()
-    # assert source_repo
-    # assignemnt_paths = sorted({fc.path for fc in source_repo.files if fc.path.endswith('.ipynb')})
-    # assignment_path = assignemnt_paths[assignment_id]
-
     assignment = session.query(Assignment). \
         options(joinedload(Assignment.questions)). \
         options(joinedload(Assignment.repo).joinedload(Repo.owner)). \
@@ -136,12 +130,12 @@ def get_assignment(assignment_id):
 
     student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
     questions = [AssignmentQuestion(assignment_id=assignment_id,
-                                    question_order=question_index,
+                                    position=position,
                                     question_name=question_name,
                                     responses=[AssignmentQuestionResponse(user_id=student_login_ids[login],
                                                                           status=status)
                                                for login, status in d.items()])
-                 for question_index, (question_name, d) in enumerate(answer_status)]
+                 for position, (question_name, d) in enumerate(answer_status)]
 
     assignment.questions = []
     session.commit()
@@ -164,5 +158,5 @@ def get_assignment_notebook(assignment_id):
 def get_combined_notebook(assignment_id):
     assignment = get_assignment(assignment_id)
     answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})
-                     for question in assignment.questions]
+                     for question in sorted(assignment.questions, key=lambda q: q.position)]
     return AssignmentModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)

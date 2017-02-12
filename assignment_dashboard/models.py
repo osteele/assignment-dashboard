@@ -119,11 +119,11 @@ class AssignmentQuestion(Base):
     """A question within an assignment."""
 
     __tablename__ = 'assignment_question'
-    __table_args__ = (UniqueConstraint('assignment_id', 'question_order'),)
+    __table_args__ = (UniqueConstraint('assignment_id', 'position'),)
 
     id = Column(Integer, primary_key=True)
     assignment_id = Column(Integer, ForeignKey('assignment.id'), nullable=False)
-    question_order = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False)
     question_name = Column(String(1024))
     notebook_data = deferred(Column(Text, nullable=True))
 
