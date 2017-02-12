@@ -17,8 +17,8 @@ from github import Github
 from sqlalchemy.sql.expression import func
 
 from .database import session
+from .helpers import find_or_create, upsert_all
 from .models import Commit, FileCommit, FileContent, Repo, User
-from .utils import find_or_create, upsert_all
 
 # Globals
 #
