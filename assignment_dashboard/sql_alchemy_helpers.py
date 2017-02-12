@@ -1,7 +1,17 @@
+"""Jupyter notebook helper functions."""
+
 from sqlalchemy.orm.exc import NoResultFound
 
 
 def find_or_create(session, model, **kwargs):
+    """Find an existing model keyed by `kwargs`, or create and add a new one.
+
+    In either case the model is returned.
+
+    Note: This method does not commit the model.
+
+    Note: This method is not ACID.
+    """
     try:
         return session.query(model).filter_by(**kwargs).one()
     except NoResultFound:
