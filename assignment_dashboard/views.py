@@ -5,7 +5,7 @@ from flask import make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
 from . import app
-from .globals import PYNB_MIME_TYPE
+from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, update_repo_assignments
 
 
@@ -47,7 +47,7 @@ def assignment(assignment_id):
 @app.route('/assignment/<assignment_id>.ipynb.html')
 def assignment_notebook(assignment_id):
     assignment = find_assignment(assignment_id)
-    nb = nbformat.reads(assignment.content, 4)
+    nb = nbformat.reads(assignment.content, NBFORMAT_VERSION)
     return HTMLExporter().from_notebook_node(nb)
 
 

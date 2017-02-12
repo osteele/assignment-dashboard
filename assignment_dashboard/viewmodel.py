@@ -12,7 +12,7 @@ import nbformat
 from sqlalchemy.orm import joinedload
 
 from .database import session
-from .globals import PYNB_MIME_TYPE
+from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
 from .nb_combine import NotebookExtractor, safe_read_notebook
 
@@ -27,7 +27,7 @@ def update_content_types(file_contents):
     for fc in file_contents:
         if fc.content_type is None:
             try:
-                nbformat.reads(fc.content, as_version=4)  # for effect
+                nbformat.reads(fc.content, as_version=NBFORMAT_VERSION)  # for effect
                 fc.content_type = PYNB_MIME_TYPE
             except nbformat.reader.NotJSONError:
                 fc.content_type = ''
