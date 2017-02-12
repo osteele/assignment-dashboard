@@ -14,7 +14,8 @@ from sqlalchemy.orm import joinedload
 from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
-from .nb_combine import NotebookExtractor, safe_read_notebook
+from .nb_combine import NotebookExtractor
+from .nb_helpers import safe_read_notebook
 
 AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
 

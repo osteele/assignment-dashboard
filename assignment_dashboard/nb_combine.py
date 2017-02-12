@@ -16,7 +16,6 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import Levenshtein
-import nbformat
 from cached_property import cached_property
 from numpy import argmin
 
@@ -31,9 +30,7 @@ CLEAR_OUTPUTS = True
 # Functions
 #
 
-def nb_add_metadata(nb, owner=None):
-    if owner:
-        nb['metadata']['owner'] = owner
+def nb_add_metadata(nb):
     for cell in nb['cells']:
         if cell['cell_type'] == 'markdown' and cell['source']:
             if re.match(QUESTION_RE, cell['source'], re.IGNORECASE):
@@ -44,17 +41,12 @@ def nb_add_metadata(nb, owner=None):
     return nb
 
 
-def safe_read_notebook(string, owner=None, clear_outputs=False):
-    try:
-        nb = nbformat.reads(string, as_version=4)
-    except nbformat.reader.NotJSONError:
-        return None
-    nb = nb_add_metadata(nb, owner)
-    if clear_outputs:
-        for cell in nb['cells']:
-            if 'outputs' in cell:
-                cell['outputs'] = []
-    return nb
+
+def nb_clear_outputs(nb):
+    """Clear the output cells from a Jupyter notebook."""
+    for cell in nb['cells']:
+        if 'outputs' in cell:
+            cell['outputs'] = []
 
 
 def nb_combine(template_notebook, student_notebooks):
@@ -153,7 +145,7 @@ class NotebookExtractor(object):
         #     for prompt in self.question_prompts:
         #         prompt.answers = OrderedDict(sorted(prompt.answers.items(), key=lambda t: cell_slines_length(t[1])))
 
-    def get_combined_notebook(self, include_usernames=False):
+    def get_combined_notebook(self, clear_outputs=False, include_usernames=False):
         if not self._processed:
             self._process()
 
@@ -170,6 +162,9 @@ class NotebookExtractor(object):
 
         answer_book = deepcopy(self.template)
         answer_book['cells'] = filtered_cells
+        if nb_clear_outputs:
+            answer_book['cells'] = deepcopy(answer_book['cells'])
+            nb_clear_outputs(answer_book['cells'])
         return answer_book
 
     def report_missing_answers(self):
