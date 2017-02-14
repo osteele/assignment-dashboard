@@ -162,9 +162,9 @@ class NotebookCollator(object):
 
         answer_book = deepcopy(self.template)
         answer_book['cells'] = filtered_cells
-        if nb_clear_outputs:
+        if clear_outputs:
             answer_book['cells'] = deepcopy(answer_book['cells'])
-            nb_clear_outputs(answer_book['cells'])
+            nb_clear_outputs(answer_book)
         return answer_book
 
     def report_missing_answers(self):

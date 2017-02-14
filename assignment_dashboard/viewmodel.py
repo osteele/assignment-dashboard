@@ -118,7 +118,7 @@ def get_assignment(assignment_id):
         .options(joinedload(FileCommit.file_content)) \
         .filter(FileCommit.path == assignment.path)
 
-    notebooks = {fc.repo.owner.login: safe_read_notebook(fc.content.decode(), clear_outputs=True)
+    notebooks = {fc.repo.owner.login: safe_read_notebook(fc.content.decode())
                  for fc in file_commits
                  if fc.file_content}
 
@@ -126,7 +126,7 @@ def get_assignment(assignment_id):
     assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
     owner_nb = notebooks[assignment.repo.owner.login]
 
-    collation = NotebookExtractor(owner_nb, student_nbs)
+    collation = NotebookCollator(owner_nb, student_nbs)
     answer_status = collation.report_missing_answers()
 
     student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
@@ -141,7 +141,7 @@ def get_assignment(assignment_id):
     assignment.questions = []
     session.commit()
 
-    assignment.nb_content = nbformat.writes(collation.get_combined_notebook())
+    assignment.nb_content = nbformat.writes(collation.get_combined_notebook(clear_outputs=True))
     assignment.questions = questions
     assignment.md5 = files_hash
 

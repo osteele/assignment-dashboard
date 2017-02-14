@@ -1,5 +1,7 @@
 # """Jupyter notebook helper functions."""
 
+import nbformat
+
 from .globals import NBFORMAT_VERSION
 
 
