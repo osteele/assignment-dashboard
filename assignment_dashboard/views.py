@@ -60,7 +60,7 @@ def combined_assignment(assignment_id):
 @app.route('/assignment/<assignment_id>/combined.ipynb')
 def download_combined_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
-    collated_nb_name = '%s-combined.%s' % os.path.splitext(os.path.basename(model.assignment_path))
+    collated_nb_name = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
 
     response = make_response(nbformat.writes(model.collated_nb))
     response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % collated_nb_name
