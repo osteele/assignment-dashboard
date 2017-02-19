@@ -11,23 +11,23 @@ See the README for a discussion.
 import base64
 import os
 import sys
+from collections import namedtuple
 
 import arrow
 from github import Github
-from sqlalchemy.sql.expression import func
 
 from .database import session
 from .models import Commit, FileCommit, FileContent, Repo, User
 from .sql_alchemy_helpers import find_or_create, upsert_all
 
-# Globals
+# globals
 #
 
 REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 
 REPROCESS_COMMITS = False
-REPORT_FILE_SHAS = None  # 'day3_reading_journal.ipynb'
+REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 if not GITHUB_API_TOKEN:
@@ -36,22 +36,61 @@ if not GITHUB_API_TOKEN:
 gh = Github(GITHUB_API_TOKEN)
 
 source_repo_name = os.environ.get('REPO', 'sd17spring/ReadingJournal')
-organization_name = source_repo_name.split('/')[0]
+
+
+# helpers
+#
+
+RepoCommitFile = namedtuple('RepoCommitItem', 'repo commit file')
+
+
+def unique_by(iter):
+    """Return a list of items with distinct keys. iter yields (item, key)."""
+    # return a list rather than a set, because items might not be hashable
+    return list({key: item for item, key in iter}.values())
+
+
+def get_file_content(repo, blob_url):
+    blob = repo.get_git_blob(blob_url.split('/')[-1])
+    content = blob.content
+    if blob.encoding == 'base64':
+        content = base64.b64decode(content)
+    return content
+
+
+def is_downloadable_path(path):
+    return any(path.endswith(suffix) for suffix in ['.ipynb', '.py', '.md', '.txt'])
+
+
+def parse_git_datetime(s):
+    return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
+
+
+def own_commit(repo, commit):
+    """Return true iff commit appears to be from the repo owner."""
+    return not commit.author or commit.author == repo.owner or commit.author.login == 'web-flow'
 
 
 # read the repos
 #
 
-print('fetching team logins')
-instructor_logins = {user.login for team in gh.get_organization(organization_name).get_teams() for user in team.get_members()}
+def get_repos(source_repo):
+    print('fetching instructor logins')
+    organization_name = source_repo_name.split('/')[0]
+    instructor_logins = {user.login for team in gh.get_organization(organization_name).get_teams()
+                         for user in team.get_members()}
 
-print('fetching repos')
+    print('fetching repos')
+    student_repos = [repo for repo in source_repo.get_forks()
+                     if repo.owner.login not in instructor_logins]
+    repos = [source_repo] + student_repos
+    if REPO_LIMIT:
+        repos = repos[:REPO_LIMIT]
+    return repos
+
 source_repo = gh.get_repo(source_repo_name)
-student_repos = [repo for repo in source_repo.get_forks()
-                 if repo.owner.login not in instructor_logins]
-repos = [source_repo] + student_repos
-if REPO_LIMIT:
-    repos = repos[:REPO_LIMIT]
+repos = get_repos(source_repo)
+
 
 # read and update students
 #
@@ -76,111 +115,117 @@ def instance_for_repo(repo):
     owner = user_instance_map[repo.owner.login]
     return repo_instance_map[owner.id, repo.name]
 
-print('updating repos')
-source_repo_instance = find_or_create(session, Repo, owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
-session.commit()
-assert source_repo_instance.id
 
-repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
-                  for repo in repos
-                  if repo != source_repo]
-upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
-session.commit()
+def update_repos(source_repo):
+    print('updating repos')
+    source_repo_instance = find_or_create(session, Repo, owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
+    session.commit()
+    assert source_repo_instance.id
+
+    repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
+                      for repo in repos
+                      if repo != source_repo]
+    upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
+    session.commit()
+
+update_repos(source_repo)
 
 repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
 
 
-# update file contents
+# record file commits
 #
 
-def get_file_content(repo, item):
-    blob = repo.get_git_blob(item.url.split('/')[-1])
-    content = blob.content
-    if blob.encoding == 'base64':
-        content = base64.b64decode(content)
-    return content
+def get_new_repo_commits(repos):
+    logged_commit_shas = {sha for sha, in session.query(Commit.sha)}
+    print('fetching commits')
 
+    # def latest_commit_date(repo):
+    #     d = session.query(Commit.date).order().first()
+    #     return d[0] if d else None
 
-def is_downloadable(item):
-    return any(item.path.endswith(suffix) for suffix in ['.ipynb', '.py', '.md', '.txt'])
+    repo_commits = [(repo, commit)
+                    for repo in repos
+                    for commit in repo.get_commits()
+                    if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
 
+    if COMMIT_LIMIT:
+        repo_commits = repo_commits[:COMMIT_LIMIT]
 
-print('updating file content')
+    if REPORT_FILE_SHAS:
+        print('commits for %s:' % REPORT_FILE_SHAS,
+              [item.sha for repo, commit in reversed(repo_commits)
+               for item in commit.files
+               if item.filename == REPORT_FILE_SHAS])
 
-file_hashes = {item.sha: (repo, item)
-               for repo in repos
-               for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
-               if item.type == 'blob'}
+    print('processing %d new commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
 
-if REPORT_FILE_SHAS:
-    print('file_hashes for %s' % REPORT_FILE_SHAS,
-          [(item.path, item.sha)
-           for repo in repos
-           for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
-           if REPORT_FILE_SHAS == REPORT_FILE_SHAS])
+    return repo_commits
 
-db_file_contents = dict(session.query(FileContent.sha, func.length(FileContent.content)).filter(FileContent.sha.in_(file_hashes)))
+repo_commits = get_new_repo_commits(repos)
 
-file_contents = [FileContent(sha=item.sha, content=get_file_content(repo, item) if is_downloadable(item) else None)
-                 for repo, item in file_hashes.values()
-                 if item.sha not in db_file_contents or is_downloadable(item) and db_file_contents[item.sha] is None]
-print('downloaded %d files' % sum(bool(fc.content) for fc in file_contents))
+file_commit_recs = unique_by(
+    (RepoCommitFile(repo, commit, item), (repo.full_name, item.filename))
+    for repo, commit in reversed(repo_commits)
+    if repo == source_repo or own_commit(repo, commit)
+    for item in commit.files)
 
-upsert_all(session, file_contents, FileContent.sha)
-session.commit()
-
-
-# update file commits
-#
-
-
-def parse_git_datetime(s):
-    return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
-
-
-def own_commit(repo, commit):
-    return not commit.author or commit.author == repo.owner or commit.author.login == 'web-flow'
-
-
-logged_commit_shas = {sha for sha, in session.query(Commit.sha)}  # TODO restrict to fetched timespan
-print('fetching commits')
-
-repo_commits = [(repo, commit)
-                for repo in repos
-                for commit in repo.get_commits()
-                if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
-
-
-if COMMIT_LIMIT:
-    repo_commits = repo_commits[:COMMIT_LIMIT]
-
-if REPORT_FILE_SHAS:
-    print('commits for %s:' % REPORT_FILE_SHAS,
-          [item.sha for repo, commit in reversed(repo_commits)
-           for item in commit.files
-           if item.filename == REPORT_FILE_SHAS])
-
-print('processing %d commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
-
-# Use a dict, to record only the latest commit for each file
-file_commit_recs = {(instance_for_repo(repo).id, item.filename): (item.sha, parse_git_datetime(commit.last_modified))
-                    for repo, commit in reversed(repo_commits)
-                    if repo == source_repo or own_commit(repo, commit)
-                    for item in commit.files}
 print('processing %d file commits' % len(file_commit_recs))
 
 if REPORT_FILE_SHAS:
     print('filtered commits for %s:' % REPORT_FILE_SHAS,
-          [sha for (_, path), (sha, _) in file_commit_recs.items() if path == REPORT_FILE_SHAS])
-
-file_commits = [FileCommit(repo_id=repo_id, path=path, mod_time=mod_time, sha=sha)
-                for (repo_id, path), (sha, mod_time) in file_commit_recs.items()]
-
-upsert_all(session, file_commits, FileCommit.repo_id, FileCommit.path)
-session.commit()
+          [item.file.sha for item in file_commit_recs if item.file.filename == REPORT_FILE_SHAS])
 
 
-# update repo commits
+def download_files(repo_commits, file_commit_recs):
+    incoming_file_shas = {item.file.sha for item in file_commit_recs}
+    if not incoming_file_shas:
+        return
+
+    db_file_content_shas = {sha for sha, in session.query(FileContent.sha).filter(FileContent.sha.in_(incoming_file_shas))}
+    missing_shas = incoming_file_shas - db_file_content_shas
+    if not missing_shas:
+        return
+
+    print('downloading %d files' % len(missing_shas))
+
+    download_commits = ((repo, commit, {item.file.filename
+                                        for item in file_commit_recs if item.commit == commit
+                                        if item.file.sha not in db_file_content_shas})
+                        for repo, commit in repo_commits)
+
+    download_commits = ((repo, commit, paths)
+                        for (repo, commit, paths) in download_commits
+                        if paths)
+
+    seen = set()
+    for repo, commit, paths in download_commits:
+        items = [item
+                 for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
+                 if item.path in paths and item.sha not in seen]
+        for item in items:
+            print('downloading %s/%s (sha=%s)' % (repo.full_name, item.path, item.sha))
+            content = get_file_content(repo, item.url) if is_downloadable_path(item.path) else None
+            fc = FileContent(sha=item.sha, content=content)
+            session.add(fc)
+            session.commit()
+            seen |= {item.sha}
+
+
+def update_file_commits(file_commit_recs):
+    file_commits = [FileCommit(repo_id=item.repo.id,
+                               path=item.file.filename,
+                               mod_time=parse_git_datetime(item.commit.last_modified),
+                               sha=item.file.sha)
+                    for item in file_commit_recs]
+    upsert_all(session, file_commits, FileCommit.repo_id, FileCommit.path)
+    session.commit()
+
+download_files(repo_commits, file_commit_recs)
+update_file_commits(file_commit_recs)
+
+
+# record repo commits
 #
 
 commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))

@@ -54,7 +54,6 @@ def upsert_all(session, instances, *key_attrs):
 
     session.add_all(instance_map.values())
 
-    counts = {"merged": len(instances) - len(instance_map), "added": len(instance_map)}
-    nonzero_counts = {k: v for k, v in counts.items() if v}
-    if nonzero_counts:
-        print('%s:' % klass.__name__, '; '.join("%s %d record(s)" % item for item in nonzero_counts.items()))
+    counts = {"Updated": len(instances) - len(instance_map), "Added": len(instance_map)}
+    for verb, count in ((k, v) for k, v in counts.items() if v):
+        print("%s %d %s record(s)" % (verb, count, klass.__name__))
