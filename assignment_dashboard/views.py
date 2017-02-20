@@ -6,6 +6,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
+from .helpers import lexituples
 from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, update_repo_assignments
 
 
@@ -28,7 +29,7 @@ def assignment_repo(repo_id):
         'assignment_repo.html',
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
-        assignments=sorted(assignment_repo.assignments, key=lambda a: a.name or ''),
+        assignments=sorted(assignment_repo.assignments, key=lambda a: lexituples(a.name or a.path)),
         student_responses=sorted(responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
 
 
