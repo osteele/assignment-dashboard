@@ -26,7 +26,7 @@ from .sql_alchemy_helpers import find_or_create, upsert_all
 
 REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
-USER_FILTER = os.environ.get('COMMIT_LIMIT', '').split(',')
+USER_FILTER = list(filter(None, os.environ.get('USER_FILTER', '').split(',')))
 
 REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', False)
 REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
@@ -88,7 +88,7 @@ def get_repos(source_repo):
     repos = [source_repo] + student_repos
 
     if USER_FILTER:
-        repo = [repo for repo in repos if repo.owner.login in USER_FILTER]
+        repos = [repo for repo in repos if repo == source_repo or repo.owner.login in USER_FILTER]
     if REPO_LIMIT:
         repos = repos[:REPO_LIMIT]
 
@@ -116,22 +116,27 @@ def save_students():
     user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in repos])))
     user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
 
+
+def get_user_instance(user):
+    return user_instance_map[user.login]
+
+
 save_students()
 
 
 # update repos
 #
 
-def instance_for_repo(repo):
-    owner = user_instance_map[repo.owner.login]
+def get_repo_instance(repo):
+    owner = get_user_instance(repo.owner)
     return repo_instance_map[owner.id, repo.name]
 
 
-def update_repos(source_repo):
+def update_repos(source_repo, repos):
     global repo_instance_map
 
-    print('updating repos')
-    source_repo_instance = find_or_create(session, Repo, owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
+    print('updating %d repos' % len(repos))
+    source_repo_instance = find_or_create(session, Repo, owner_id=get_user_instance(source_repo.owner).id, name=source_repo.name)
     session.commit()
     assert source_repo_instance.id
 
@@ -143,7 +148,7 @@ def update_repos(source_repo):
 
     repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
 
-update_repos(source_repo)
+update_repos(source_repo, repos)
 
 
 # record file commits
@@ -236,7 +241,7 @@ def download_files(repo_commits, file_commit_recs):
 
 
 def update_file_commits(file_commit_recs):
-    file_commits = [FileCommit(repo_id=item.repo.id,
+    file_commits = [FileCommit(repo_id=get_repo_instance(item.repo).id,
                                path=item.file.filename,
                                mod_time=parse_git_datetime(item.commit.last_modified),
                                sha=item.file.sha)
@@ -254,7 +259,7 @@ update_file_commits(file_commit_recs)
 #
 
 def record_repo_commits(repo_commits):
-    commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
+    commit_instances = [Commit(repo_id=get_repo_instance(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
                         for repo, commit in repo_commits]
     upsert_all(session, commit_instances, Commit.repo_id, Commit.sha)
     session.commit()
