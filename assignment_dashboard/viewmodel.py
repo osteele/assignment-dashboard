@@ -79,8 +79,8 @@ def update_repo_assignments(repo_id):
 
     responses = [dict(user=student_repo.owner,
                       repo=student_repo,
-                      responses=[file_presentation(user_path_files.get((student_repo.owner.id, path), None), path)
-                                 for path in assignment_paths]
+                      responses={path: file_presentation(user_path_files.get((student_repo.owner.id, path), None), path)
+                                 for path in assignment_paths}
                       )
                  for student_repo in assignment_repo.forks]
 
@@ -113,10 +113,11 @@ def get_assignment(assignment_id):
         return assignment
 
     # .options(undefer(FileCommit.file_content.content)) \
-    file_commits = session.query(FileCommit) \
-        .options(joinedload(FileCommit.repo)) \
-        .options(joinedload(FileCommit.file_content)) \
-        .filter(FileCommit.path == assignment.path)
+    file_commits = [fc for fc in (session.query(FileCommit)
+                                  .options(joinedload(FileCommit.repo))
+                                  .options(joinedload(FileCommit.file_content))
+                                  .filter(FileCommit.path == assignment.path))
+                    if fc.repo]
 
     notebooks = {fc.repo.owner.login: safe_read_notebook(fc.content.decode())
                  for fc in file_commits
