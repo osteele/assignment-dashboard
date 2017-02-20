@@ -55,7 +55,7 @@ class User(Base):
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
     status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
 
-    file_commits = relationship('Repo', backref='owner')
+    # file_commits = relationship('Repo', backref='owner')
 
     def __repr__(self):
         return "<User %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'login', 'role'] if k)
@@ -73,6 +73,7 @@ class Repo(Base):
 
     source = relationship('Repo', remote_side=[id])
     forks = relationship('Repo')
+    owner = relationship('User')
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
 
     def __repr__(self):
@@ -91,6 +92,8 @@ class Commit(Base):
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
+
+    repo = relationship('Repo')
 
 
 # Assignment-related models

@@ -61,7 +61,7 @@ def update_repo_assignments(repo_id):
     # instead of assignment_repo.files, to avoid 1 + N
     # TODO filter to forks of source
     file_commits = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
-    user_path_files = {(fc.repo.owner_id, fc.path): fc for fc in file_commits}
+    user_path_files = {(fc.repo.owner_id, fc.path): fc for fc in file_commits if fc.repo}
     update_content_types([fc.file_content for fc in file_commits if fc.file_content])
     session.commit()
 

@@ -12,6 +12,7 @@ import base64
 import os
 import sys
 from collections import namedtuple
+from datetime import timedelta
 
 import arrow
 from github import Github
@@ -140,13 +141,18 @@ def get_new_repo_commits(repos):
     logged_commit_shas = {sha for sha, in session.query(Commit.sha)}
     print('fetching commits')
 
-    # def latest_commit_date(repo):
-    #     d = session.query(Commit.date).order().first()
-    #     return d[0] if d else None
+    def compute_since(repo):
+        date_tuple = (session.query(FileCommit.mod_time).
+                      filter(FileCommit.repo_id == Repo.id).
+                      filter(Repo.owner_id == User.id).
+                      filter(User.login == repo.owner.login).
+                      order_by(FileCommit.mod_time.desc()).
+                      first())
+        return {'since': date_tuple[0] + timedelta(weeks=-1)} if date_tuple else {}
 
     repo_commits = [(repo, commit)
                     for repo in repos
-                    for commit in repo.get_commits()
+                    for commit in repo.get_commits(**compute_since(repo))
                     if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
 
     if COMMIT_LIMIT:
@@ -179,11 +185,14 @@ if REPORT_FILE_SHAS:
 
 def download_files(repo_commits, file_commit_recs):
     incoming_file_shas = {item.file.sha for item in file_commit_recs}
+    print('incoming_file_shas', incoming_file_shas)
     if not incoming_file_shas:
         return
 
     db_file_content_shas = {sha for sha, in session.query(FileContent.sha).filter(FileContent.sha.in_(incoming_file_shas))}
+    print('db_file_content_shas', db_file_content_shas)
     missing_shas = incoming_file_shas - db_file_content_shas
+    print('missing_shas', missing_shas)
     if not missing_shas:
         return
 
