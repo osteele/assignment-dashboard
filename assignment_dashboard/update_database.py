@@ -26,8 +26,9 @@ from .sql_alchemy_helpers import find_or_create, upsert_all
 
 REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
+USER_FILTER = os.environ.get('COMMIT_LIMIT', '').split(',')
 
-REPROCESS_COMMITS = False
+REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', False)
 REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
@@ -85,8 +86,12 @@ def get_repos(source_repo):
     student_repos = [repo for repo in source_repo.get_forks()
                      if repo.owner.login not in instructor_logins]
     repos = [source_repo] + student_repos
+
+    if USER_FILTER:
+        repo = [repo for repo in repos if repo.owner.login in USER_FILTER]
     if REPO_LIMIT:
         repos = repos[:REPO_LIMIT]
+
     return repos
 
 source_repo = gh.get_repo(source_repo_name)
@@ -96,17 +101,22 @@ repos = get_repos(source_repo)
 # read and update students
 #
 
-print('updating students')
-students = [User(login=repo.owner.login,
-                 fullname=repo.owner.name,
-                 avatar_url=repo.owner.avatar_url or repo.owner.gravatar_url,
-                 role='organization' if repo == source_repo else 'student')
-            for repo in repos]
-upsert_all(session, students, User.login)
-session.commit()
+def save_students():
+    global user_instance_map
 
-user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in repos])))
-user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
+    print('updating students')
+    students = [User(login=repo.owner.login,
+                     fullname=repo.owner.name,
+                     avatar_url=repo.owner.avatar_url or repo.owner.gravatar_url,
+                     role='organization' if repo == source_repo else 'student')
+                for repo in repos]
+    upsert_all(session, students, User.login)
+    session.commit()
+
+    user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in repos])))
+    user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
+
+save_students()
 
 
 # update repos
@@ -118,6 +128,8 @@ def instance_for_repo(repo):
 
 
 def update_repos(source_repo):
+    global repo_instance_map
+
     print('updating repos')
     source_repo_instance = find_or_create(session, Repo, owner_id=user_instance_map[source_repo.owner.login].id, name=source_repo.name)
     session.commit()
@@ -129,19 +141,21 @@ def update_repos(source_repo):
     upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
     session.commit()
 
-update_repos(source_repo)
+    repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
 
-repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
+update_repos(source_repo)
 
 
 # record file commits
 #
 
 def get_new_repo_commits(repos):
-    logged_commit_shas = {sha for sha, in session.query(Commit.sha)}
+    logged_commit_shas = set() if REPROCESS_COMMITS else {sha for sha, in session.query(Commit.sha)}
     print('fetching commits')
 
-    def compute_since(repo):
+    def get_commit_kwargs(repo):
+        if REPROCESS_COMMITS:
+            return {}
         date_tuple = (session.query(FileCommit.mod_time).
                       filter(FileCommit.repo_id == Repo.id).
                       filter(Repo.owner_id == User.id).
@@ -152,7 +166,7 @@ def get_new_repo_commits(repos):
 
     repo_commits = [(repo, commit)
                     for repo in repos
-                    for commit in repo.get_commits(**compute_since(repo))
+                    for commit in repo.get_commits(**get_commit_kwargs(repo))
                     if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
 
     if COMMIT_LIMIT:
@@ -168,31 +182,31 @@ def get_new_repo_commits(repos):
 
     return repo_commits
 
-repo_commits = get_new_repo_commits(repos)
 
-file_commit_recs = unique_by(
-    (RepoCommitFile(repo, commit, item), (repo.full_name, item.filename))
-    for repo, commit in reversed(repo_commits)
-    if repo == source_repo or own_commit(repo, commit)
-    for item in commit.files)
+def get_file_commit_recs():
+    file_commit_recs = unique_by(
+        (RepoCommitFile(repo, commit, item), (repo.full_name, item.filename))
+        for repo, commit in reversed(repo_commits)
+        if repo == source_repo or own_commit(repo, commit)
+        for item in commit.files
+        if item.sha)
 
-print('processing %d file commits' % len(file_commit_recs))
+    print('processing %d file commits' % len(file_commit_recs))
 
-if REPORT_FILE_SHAS:
-    print('filtered commits for %s:' % REPORT_FILE_SHAS,
-          [item.file.sha for item in file_commit_recs if item.file.filename == REPORT_FILE_SHAS])
+    if REPORT_FILE_SHAS:
+        print('filtered commits for %s:' % REPORT_FILE_SHAS,
+              [item.file.sha for item in file_commit_recs if item.file.filename == REPORT_FILE_SHAS])
+
+    return file_commit_recs
 
 
 def download_files(repo_commits, file_commit_recs):
     incoming_file_shas = {item.file.sha for item in file_commit_recs}
-    print('incoming_file_shas', incoming_file_shas)
     if not incoming_file_shas:
         return
 
     db_file_content_shas = {sha for sha, in session.query(FileContent.sha).filter(FileContent.sha.in_(incoming_file_shas))}
-    print('db_file_content_shas', db_file_content_shas)
     missing_shas = incoming_file_shas - db_file_content_shas
-    print('missing_shas', missing_shas)
     if not missing_shas:
         return
 
@@ -230,6 +244,8 @@ def update_file_commits(file_commit_recs):
     upsert_all(session, file_commits, FileCommit.repo_id, FileCommit.path)
     session.commit()
 
+repo_commits = get_new_repo_commits(repos)
+file_commit_recs = get_file_commit_recs()
 download_files(repo_commits, file_commit_recs)
 update_file_commits(file_commit_recs)
 
@@ -237,7 +253,11 @@ update_file_commits(file_commit_recs)
 # record repo commits
 #
 
-commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
-                    for repo, commit in repo_commits]
-upsert_all(session, commit_instances, Commit.repo_id, Commit.sha)
-session.commit()
+def record_repo_commits(repo_commits):
+    commit_instances = [Commit(repo_id=instance_for_repo(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
+                        for repo, commit in repo_commits]
+    upsert_all(session, commit_instances, Commit.repo_id, Commit.sha)
+    session.commit()
+
+
+record_repo_commits(repo_commits)
