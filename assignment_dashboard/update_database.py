@@ -43,7 +43,7 @@ source_repo_name = os.environ.get('REPO', 'sd17spring/ReadingJournal')
 # helpers
 #
 
-RepoCommitFile = namedtuple('RepoCommitItem', 'repo commit file')
+RepoCommitFile = namedtuple('RepoCommitItem', 'commit file')
 
 
 def unique_by(iter):
@@ -103,6 +103,7 @@ def get_forks(source_repo, ignore_logins=None):
 
 user_instance_map = {}
 
+
 def save_users(users, role='student'):
     print('updating students')
     user_instances = [User(login=user.login,
@@ -124,15 +125,18 @@ def get_user_instance(user):
 # update repos
 #
 
+repo_instance_map = None
+
 
 def get_repo_instance(repo):
+    global repo_instance_map
+    if not repo_instance_map:
+        repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
     owner = get_user_instance(repo.owner)
     return repo_instance_map[owner.id, repo.name]
 
 
 def save_repos(source_repo, repos):
-    global repo_instance_map
-
     print('updating %d repos' % len(repos))
     source_repo_instance = find_or_create(session, Repo, owner_id=get_user_instance(source_repo.owner).id, name=source_repo.name)
     session.commit()
@@ -144,15 +148,12 @@ def save_repos(source_repo, repos):
     upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
     session.commit()
 
-    repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
-
 
 # record file commits
 #
 
 
 def get_new_repo_commits(repo):
-    # print('fetching commits')
     saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
     saved_commit_shas = {commit.sha for commit in saved_commits}
 
@@ -167,7 +168,7 @@ def get_new_repo_commits(repo):
                       first())
         return {'since': date_tuple[0] + timedelta(weeks=-1)} if date_tuple else {}
 
-    repo_commits = [(repo, commit)
+    repo_commits = [commit
                     for commit in repo.get_commits(**get_commit_kwargs(repo))
                     if commit.sha not in saved_commit_shas]
 
@@ -176,7 +177,8 @@ def get_new_repo_commits(repo):
 
     if REPORT_FILE_SHAS:
         print('commits for %s:' % REPORT_FILE_SHAS,
-              [item.sha for repo, commit in reversed(repo_commits)
+              [item.sha
+               for commit in reversed(repo_commits)
                for item in commit.files
                if item.filename == REPORT_FILE_SHAS])
 
@@ -191,10 +193,10 @@ def get_new_repo_commits(repo):
     return repo_commits
 
 
-def get_file_commit_recs(repo_commits, all_commits=False):
+def get_file_commit_recs(repo, repo_commits, all_commits=False):
     file_commit_recs = unique_by(
-        (RepoCommitFile(repo, commit, item), (repo.full_name, item.filename))
-        for repo, commit in reversed(repo_commits)
+        (RepoCommitFile(commit, item), (repo.full_name, item.filename))
+        for commit in reversed(repo_commits)
         if all_commits or own_commit(repo, commit)
         for item in commit.files
         if item.sha)
@@ -208,7 +210,7 @@ def get_file_commit_recs(repo_commits, all_commits=False):
     return file_commit_recs
 
 
-def download_files(repo_commits, file_commit_recs):
+def download_files(repo, repo_commits, file_commit_recs):
     incoming_file_shas = {item.file.sha for item in file_commit_recs}
     if not incoming_file_shas:
         return
@@ -220,21 +222,23 @@ def download_files(repo_commits, file_commit_recs):
 
     print('downloading %d files' % len(missing_shas))
 
-    download_commits = ((repo, commit, {item.file.filename
-                                        for item in file_commit_recs if item.commit == commit
-                                        if item.file.sha not in db_file_content_shas})
-                        for repo, commit in repo_commits)
+    download_commits = ((commit, {item.file.filename
+                                  for item in file_commit_recs if item.commit == commit
+                                  if item.file.sha not in db_file_content_shas})
+                        for commit in repo_commits)
 
-    download_commits = ((repo, commit, paths)
-                        for (repo, commit, paths) in download_commits
+    download_commits = ((commit, paths)
+                        for (commit, paths) in download_commits
                         if paths)
 
     seen = set()
-    for repo, commit, paths in download_commits:
+    for commit, paths in download_commits:
         items = [item
                  for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
-                 if item.path in paths and item.sha not in seen]
+                 if item.path in paths]
         for item in items:
+            if item.sha in seen:
+                continue
             print('downloading %s/%s (sha=%s)' % (repo.full_name, item.path, item.sha))
             content = get_file_content(repo, item.url) if is_downloadable_path(item.path) else None
             fc = FileContent(sha=item.sha, content=content)
@@ -243,8 +247,8 @@ def download_files(repo_commits, file_commit_recs):
             seen |= {item.sha}
 
 
-def update_file_commits(file_commit_recs):
-    file_commits = [FileCommit(repo_id=get_repo_instance(item.repo).id,
+def update_file_commits(repo, file_commit_recs):
+    file_commits = [FileCommit(repo_id=get_repo_instance(repo).id,
                                path=item.file.filename,
                                mod_time=parse_git_datetime(item.commit.last_modified),
                                sha=item.file.sha)
@@ -256,9 +260,11 @@ def update_file_commits(file_commit_recs):
 # record repo commits
 #
 
-def record_repo_commits(repo_commits):
-    commit_instances = [Commit(repo_id=get_repo_instance(repo).id, sha=commit.sha, commit_date=parse_git_datetime(commit.last_modified))
-                        for repo, commit in repo_commits]
+def record_repo_commits(repo, repo_commits):
+    commit_instances = [Commit(repo_id=get_repo_instance(repo).id,
+                               sha=commit.sha,
+                               commit_date=parse_git_datetime(commit.last_modified))
+                        for commit in repo_commits]
     upsert_all(session, commit_instances, Commit.repo_id, Commit.sha)
     session.commit()
 
@@ -267,12 +273,12 @@ def update_repo_files(repo, all_commits=False):
     repo_commits = get_new_repo_commits(repo)
     if not repo_commits:
         return
-    file_commit_recs = get_file_commit_recs(repo_commits, all_commits=all_commits)
+    file_commit_recs = get_file_commit_recs(repo, repo_commits, all_commits=all_commits)
     if not file_commit_recs:
         return
-    download_files(repo_commits, file_commit_recs)
-    update_file_commits(file_commit_recs)
-    record_repo_commits(repo_commits)
+    download_files(repo, repo_commits, file_commit_recs)
+    update_file_commits(repo, file_commit_recs)
+    record_repo_commits(repo, repo_commits)
 
 # main
 #
@@ -287,7 +293,7 @@ def update_db():
 
     repos = [source_repo] + forks
     if REPO_LIMIT:
-        repos = repos[:REPO_LIMIT]
+        repos = source_repo[:REPO_LIMIT]
 
     for i, repo in enumerate(repos):
         print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
