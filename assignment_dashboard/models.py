@@ -75,6 +75,7 @@ class Repo(Base):
     forks = relationship('Repo')
     owner = relationship('User')
     # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
+    commits = relationship('Commit', backref='repo')
 
     def __repr__(self):
         return "<Repo %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'] if k)
@@ -93,7 +94,8 @@ class Commit(Base):
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
 
-    repo = relationship('Repo')
+    def __repr__(self):
+        return "<Commit %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'repo_id', 'sha'] if k)
 
 
 # Assignment-related models

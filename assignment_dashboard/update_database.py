@@ -151,10 +151,10 @@ def save_repos(source_repo, repos):
 #
 
 
-def get_new_repo_commits(repos):
-    # TODO just commits for this repo
-    logged_commit_shas = set() if REPROCESS_COMMITS else {sha for sha, in session.query(Commit.sha)}
-    print('fetching commits')
+def get_new_repo_commits(repo):
+    # print('fetching commits')
+    saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
+    saved_commit_shas = {commit.sha for commit in saved_commits}
 
     def get_commit_kwargs(repo):
         if REPROCESS_COMMITS:
@@ -168,9 +168,8 @@ def get_new_repo_commits(repos):
         return {'since': date_tuple[0] + timedelta(weeks=-1)} if date_tuple else {}
 
     repo_commits = [(repo, commit)
-                    for repo in repos
                     for commit in repo.get_commits(**get_commit_kwargs(repo))
-                    if commit.sha not in logged_commit_shas]
+                    if commit.sha not in saved_commit_shas]
 
     if COMMIT_LIMIT:
         repo_commits = repo_commits[:COMMIT_LIMIT]
@@ -181,8 +180,13 @@ def get_new_repo_commits(repos):
                for item in commit.files
                if item.filename == REPORT_FILE_SHAS])
 
-    ignored_message = "; ignoring %d previously seen" % len(logged_commit_shas) if logged_commit_shas else ""
-    print("processing %d new commits%s" % (len(repo_commits), ignored_message))
+    messages = []
+    if repo_commits:
+        messages.append("processing %d new commits" % len(repo_commits))
+    if saved_commits:
+        messages.append("ignoring %d previous commits" % len(saved_commits))
+    if messages:
+        print(";".join(messages))
 
     return repo_commits
 
@@ -260,8 +264,7 @@ def record_repo_commits(repo_commits):
 
 
 def update_repo_files(repo, all_commits=False):
-    print("Updating %s" % repo.full_name)
-    repo_commits = get_new_repo_commits([repo])
+    repo_commits = get_new_repo_commits(repo)
     if not repo_commits:
         return
     file_commit_recs = get_file_commit_recs(repo_commits, all_commits=all_commits)
@@ -274,6 +277,7 @@ def update_repo_files(repo, all_commits=False):
 # main
 #
 
+
 def update_db():
     source_repo = gh.get_repo(source_repo_name)
     forks = get_forks(source_repo)
@@ -285,5 +289,6 @@ def update_db():
     if REPO_LIMIT:
         repos = repos[:REPO_LIMIT]
 
-    for repo in repos:
+    for i, repo in enumerate(repos):
+        print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
         update_repo_files(repo, all_commits=(repo == source_repo))
