@@ -27,8 +27,8 @@ def updatedb(**kwargs):
         if v is not None:
             os.environ[k.upper()] = str(v)
     # TODO turn update_database.py into a module function, and call that instead
-    import assignment_dashboard.update_database  # noqa: F401
-
+    from .update_database import update_db  # noqa: F401
+    update_db()
 
 @app.cli.command()
 def delete_assignments_cache():

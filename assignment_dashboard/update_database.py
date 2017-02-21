@@ -28,7 +28,7 @@ REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 USER_FILTER = list(filter(None, os.environ.get('USER_FILTER', '').split(',')))
 
-REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', False)
+REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False', '0')
 REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
@@ -76,63 +76,61 @@ def own_commit(repo, commit):
 # read the repos
 #
 
-def get_repos(source_repo):
+def get_instructor_logins(repo):
     print('fetching instructor logins')
     organization_name = source_repo_name.split('/')[0]
-    instructor_logins = {user.login for team in gh.get_organization(organization_name).get_teams()
-                         for user in team.get_members()}
+    return {user.login
+            for team in gh.get_organization(organization_name).get_teams()
+            for user in team.get_members()}
+
+
+def get_forks(source_repo, ignore_logins=None):
+    if ignore_logins is None:
+        ignore_logins = get_instructor_logins(source_repo)
 
     print('fetching repos')
-    student_repos = [repo for repo in source_repo.get_forks()
-                     if repo.owner.login not in instructor_logins]
-    repos = [source_repo] + student_repos
+    repos = [repo for repo in source_repo.get_forks()
+             if repo.owner.login not in ignore_logins]
 
     if USER_FILTER:
-        repos = [repo for repo in repos if repo == source_repo or repo.owner.login in USER_FILTER]
-    if REPO_LIMIT:
-        repos = repos[:REPO_LIMIT]
+        repos = [repo for repo in repos if repo.owner.login in USER_FILTER]
 
     return repos
-
-source_repo = gh.get_repo(source_repo_name)
-repos = get_repos(source_repo)
 
 
 # read and update students
 #
 
-def save_students():
-    global user_instance_map
+user_instance_map = {}
 
+def save_users(users, role='student'):
     print('updating students')
-    students = [User(login=repo.owner.login,
-                     fullname=repo.owner.name,
-                     avatar_url=repo.owner.avatar_url or repo.owner.gravatar_url,
-                     role='organization' if repo == source_repo else 'student')
-                for repo in repos]
-    upsert_all(session, students, User.login)
+    user_instances = [User(login=user.login,
+                           fullname=user.name,
+                           avatar_url=user.avatar_url or repo.owner.gravatar_url,
+                           role=role)
+                      for user in users]
+
+    upsert_all(session, user_instances, User.login)
     session.commit()
 
-    user_instances = list(session.query(User).filter(User.login.in_([repo.owner.login for repo in repos])))
-    user_instance_map = {instance.login: instance for instance in user_instances}  # FIXME there's surely some way to do this within the ORM
+    user_instances = list(session.query(User).filter(User.login.in_([user.login for user in users])))
+    user_instance_map.update({instance.login: instance for instance in user_instances})  # FIXME there's surely some way to do this within the ORM
 
 
 def get_user_instance(user):
     return user_instance_map[user.login]
 
-
-save_students()
-
-
 # update repos
 #
+
 
 def get_repo_instance(repo):
     owner = get_user_instance(repo.owner)
     return repo_instance_map[owner.id, repo.name]
 
 
-def update_repos(source_repo, repos):
+def save_repos(source_repo, repos):
     global repo_instance_map
 
     print('updating %d repos' % len(repos))
@@ -148,13 +146,13 @@ def update_repos(source_repo, repos):
 
     repo_instance_map = {(instance.owner_id, instance.name): instance for instance in session.query(Repo)}
 
-update_repos(source_repo, repos)
-
 
 # record file commits
 #
 
+
 def get_new_repo_commits(repos):
+    # TODO just commits for this repo
     logged_commit_shas = set() if REPROCESS_COMMITS else {sha for sha, in session.query(Commit.sha)}
     print('fetching commits')
 
@@ -172,7 +170,7 @@ def get_new_repo_commits(repos):
     repo_commits = [(repo, commit)
                     for repo in repos
                     for commit in repo.get_commits(**get_commit_kwargs(repo))
-                    if REPROCESS_COMMITS or commit.sha not in logged_commit_shas]
+                    if commit.sha not in logged_commit_shas]
 
     if COMMIT_LIMIT:
         repo_commits = repo_commits[:COMMIT_LIMIT]
@@ -183,16 +181,17 @@ def get_new_repo_commits(repos):
                for item in commit.files
                if item.filename == REPORT_FILE_SHAS])
 
-    print('processing %d new commits; ignoring %d previously processed' % (len(repo_commits), len(logged_commit_shas)))
+    ignored_message = "; ignoring %d previously seen" % len(logged_commit_shas) if logged_commit_shas else ""
+    print("processing %d new commits%s" % (len(repo_commits), ignored_message))
 
     return repo_commits
 
 
-def get_file_commit_recs():
+def get_file_commit_recs(repo_commits, all_commits=False):
     file_commit_recs = unique_by(
         (RepoCommitFile(repo, commit, item), (repo.full_name, item.filename))
         for repo, commit in reversed(repo_commits)
-        if repo == source_repo or own_commit(repo, commit)
+        if all_commits or own_commit(repo, commit)
         for item in commit.files
         if item.sha)
 
@@ -249,11 +248,6 @@ def update_file_commits(file_commit_recs):
     upsert_all(session, file_commits, FileCommit.repo_id, FileCommit.path)
     session.commit()
 
-repo_commits = get_new_repo_commits(repos)
-file_commit_recs = get_file_commit_recs()
-download_files(repo_commits, file_commit_recs)
-update_file_commits(file_commit_recs)
-
 
 # record repo commits
 #
@@ -265,4 +259,31 @@ def record_repo_commits(repo_commits):
     session.commit()
 
 
-record_repo_commits(repo_commits)
+def update_repo_files(repo, all_commits=False):
+    print("Updating %s" % repo.full_name)
+    repo_commits = get_new_repo_commits([repo])
+    if not repo_commits:
+        return
+    file_commit_recs = get_file_commit_recs(repo_commits, all_commits=all_commits)
+    if not file_commit_recs:
+        return
+    download_files(repo_commits, file_commit_recs)
+    update_file_commits(file_commit_recs)
+    record_repo_commits(repo_commits)
+
+# main
+#
+
+def update_db():
+    source_repo = gh.get_repo(source_repo_name)
+    forks = get_forks(source_repo)
+    save_users([source_repo.owner], role='organization')
+    save_users([repo.owner for repo in forks], role='student')
+    save_repos(source_repo, forks)
+
+    repos = [source_repo] + forks
+    if REPO_LIMIT:
+        repos = repos[:REPO_LIMIT]
+
+    for repo in repos:
+        update_repo_files(repo, all_commits=(repo == source_repo))
