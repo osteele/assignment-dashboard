@@ -34,8 +34,8 @@
           {% for assignment in assignments %}
             {% set response = row.responses[assignment.path] %}
             <td class="{{ response.css_class }}">
-              <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="View the student file">
-                {{ response.mod_time }}
+              <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="{{ response.hover }}">
+                {{ response.text }}
               </a>
             </td>
           {% endfor %}
