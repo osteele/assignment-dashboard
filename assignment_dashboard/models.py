@@ -43,6 +43,9 @@ class FileContent(Base):
     content_type = Column(String(40), nullable=True)
     content = deferred(Column(Text, nullable=True))
 
+    def __repr__(self):
+        return "<FileContent %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'sha', 'content_type'] if k)
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -54,8 +57,7 @@ class User(Base):
 
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
     status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
-
-    # file_commits = relationship('Repo', backref='owner')
+    repos = relationship('Repo', backref='owner')
 
     def __repr__(self):
         return "<User %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'login', 'role'] if k)
@@ -73,8 +75,6 @@ class Repo(Base):
 
     source = relationship('Repo', remote_side=[id])
     forks = relationship('Repo')
-    owner = relationship('User')
-    # forks = relationship('Repo', backref=backref('Repo', remote_side=[owner_id]))
     commits = relationship('Commit', backref='repo')
 
     def __repr__(self):
