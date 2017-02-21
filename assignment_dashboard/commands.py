@@ -18,8 +18,8 @@ def initdb():
 @click.option('--repo-limit', help="Limit the number of repos.")
 @click.option('--commit-limit', help="Limit the number of commits.")
 @click.option('--repo', help="The name of the repo in org/name format")
-@click.option('--reprocess-commits', is_flag=True, help="Reprocess previously-seen commits")
-@click.option('--users', help="Reprocess previously-seen commits")
+@click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
+@click.option('--users', help="Restrict to logins in this comma-separated list")
 def updatedb(**kwargs):
     click.echo("Updating the database.")
     for k, v in kwargs.items():
@@ -29,6 +29,7 @@ def updatedb(**kwargs):
     # TODO turn update_database.py into a module function, and call that instead
     from .update_database import update_db  # noqa: F401
     update_db()
+
 
 @app.cli.command()
 def delete_assignments_cache():
