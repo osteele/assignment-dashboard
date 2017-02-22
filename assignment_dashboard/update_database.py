@@ -19,7 +19,7 @@ from github import Github
 
 from .database import session
 from .models import Commit, FileCommit, FileContent, Repo, User
-from .sql_alchemy_helpers import find_or_create, upsert_all
+from .sql_alchemy_helpers import find_or_create, update_instance, upsert_all
 
 # globals
 #
@@ -106,13 +106,21 @@ user_instance_map = {}
 
 def save_users(users, role='student'):
     print('updating students')
-    user_instances = [User(login=user.login,
-                           fullname=user.name,
-                           avatar_url=user.avatar_url or repo.owner.gravatar_url,
-                           role=role)
-                      for user in users]
+    saved_instances = {instance.login: instance
+                       for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
+    for user in users:
+        attrs = dict(login=user.login,
+                     avatar_url=user.avatar_url or repo.owner.gravatar_url,
+                     role=role,
+                     **dict(fullname=user.name) if user.name else {})
 
-    upsert_all(session, user_instances, User.login)
+        instance = saved_instances.get(user.login, None)
+        if instance:
+            update_instance(instance, attrs)
+        else:
+            instance = User(**attrs)
+        session.add(instance)
+
     session.commit()
 
     user_instances = list(session.query(User).filter(User.login.in_([user.login for user in users])))

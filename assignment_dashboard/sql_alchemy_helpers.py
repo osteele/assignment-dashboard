@@ -20,6 +20,11 @@ def find_or_create(session, model, **kwargs):
         return instance
 
 
+def update_instance(instance, attrs):
+    for k, v in attrs.items():
+        setattr(instance, k, v)
+
+
 def upsert_all(session, instances, *key_attrs):
     """Merge or add instances to the session.
 

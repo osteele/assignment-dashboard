@@ -44,13 +44,15 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ## Usage
 
-The code has two components. The updater updates the project database from GitHub.
+The admin tasks update the project database from GitHub.
 The web application browses the data in this database.
 
+### Admin Tasks
 
-### Update the database
 
-    $ FLASK_APP=assignment_dashboard python updatedb
+#### Update the database
+
+    $ FLASK_APP=assignment_dashboard flask updatedb
 
 This picks up new commits.
 
@@ -58,6 +60,20 @@ This will take a while to run the first time.
 The next time it will skip commits that have already been ingested*, and will run faster.
 It also saves its work one repository at a time (and after each downloaded file),
 so if it is interrupted in the middle, it will pick up close to where it left off.
+
+
+#### Set User Names
+
+      $ FLASK_APP=assignment_dashboard flask set_usernames usernames.csv
+
+Update user names in the database from the rows in `usernames.csv`.
+
+`usernames.csv` should be a CSV file with a column named "name" or "username",
+and a column that contains the string "git" (or mixed-case versions of these
+strings).
+
+A subsequent call to `flask updatedb` will replace usernames in the database
+by the user's GitHub name if the GitHub name is not empty.
 
 
 ### Run the Web Application
@@ -74,6 +90,12 @@ File bugs and enhancement requests [here](https://github.com/osteele/assignment-
 ### What to Work On
 
 The [GitHub issues](https://github.com/osteele/assignment-dashboard/issues) lists bugs and enhancement requests.
+
+### Tips
+
+`scripts/shell` starts a Python REPL with the globals in the `database` and
+`models` imported at top-level. This script uses the technique from
+[preconfigured interactive shell](http://flask.pocoo.org/snippets/23/).
 
 ### Style
 

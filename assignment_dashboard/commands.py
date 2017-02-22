@@ -1,5 +1,6 @@
 import os
 import re
+from collections import defaultdict
 
 import click
 import pandas as pd
@@ -46,17 +47,24 @@ def delete_assignments_cache():
 @click.argument('csv_filename')
 def set_usernames(csv_filename):
     df = pd.DataFrame.from_csv(csv_filename, index_col=None)
-    name_col = next(col for col in df.columns if re.match(r'name', col, re.I))
+    name_col = next(col for col in df.columns if re.match(r'(user ?)?names?', col, re.I))
     github_col = next(col for col in df.columns if re.search(r'git', col, re.I))
     logins = set(df[github_col])
     users = {u.login: u for u in session.query(User).filter(User.login.in_(logins))}
 
     unknown = logins - set(users.keys())
     if unknown:
-        print('unknown:', unknown)
+        print('not in the database:', unknown)
 
+    counts = defaultdict(lambda: 0)
     for _, row in df.iterrows():
         login, name = row[github_col], row[name_col]
-        if login in users:
+        if login not in users:
+            counts['not in the database'] += 1
+        elif users[login].fullname == name:
+            counts['unchanged'] += 1
+        else:
             users[login].fullname = name
+            counts['updated'] += 1
     session.commit()
+    print(";".join("%d records %s" % (v, k) for k, v in counts.items()))
