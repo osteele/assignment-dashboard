@@ -39,7 +39,8 @@ def assignment_repo_csv(repo_id):
     assignment_repo, responses = update_repo_assignments(repo_id)
     assignment_names = [a.name or a.path for a in assignment_repo.assignments]
     df = pd.DataFrame({(assgn.name or assgn.path):
-                       {rs['user'].login: rs['responses'].get(assgn.path, {}).get('status', None)
+                       {(rs['user'].fullname or rs['user'].login):
+                        rs['responses'].get(assgn.path, {}).get('status', None)
                         for rs in responses}
                        for assgn in assignment_repo.assignments},
                       columns=sorted(assignment_names, key=lexituples))
