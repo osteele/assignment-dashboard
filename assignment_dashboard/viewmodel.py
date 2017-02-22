@@ -13,11 +13,14 @@ from sqlalchemy.orm import joinedload
 
 from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
+from .helpers import lexituples
 from .models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
 from .nb_helpers import safe_read_notebook
 from .nbcollate import NotebookCollator
 
-AssignmentModel = namedtuple('AssignmentModel', 'assignment_path collated_nb answer_status')
+AssignmentViewModel = namedtuple('AssignmentViewModel', 'assignment_path collated_nb answer_status')
+StudentViewModel = namedtuple('StudentViewModel', 'user repo display_name')
+AssignmentResponseViewModel = namedtuple('AssignmentResponseViewModel', 'assignment_repo assignments students responses')
 
 
 def get_source_repos():
@@ -40,12 +43,12 @@ def compute_assignment_name(path):
     return re.sub(NOTEBOOK_ASSIGNMENT_PATH_RE, NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE, path)
 
 
-def update_repo_assignments(repo_id):
+def get_assignment_responses(repo_id):
     """Update the repo.assignments from its list of files. Returns a pair (assignment_repo, response_status)."""
-    assignment_repo = session.query(Repo). \
-        options(joinedload(Repo.assignments)). \
-        options(joinedload(Repo.files)). \
-        filter(Repo.id == repo_id).first()
+    assignment_repo = (session.query(Repo).
+                       options(joinedload(Repo.assignments)).
+                       options(joinedload(Repo.files)).
+                       filter(Repo.id == repo_id).first())
     assert assignment_repo
 
     # refresh the list of assignments
@@ -78,14 +81,19 @@ def update_repo_assignments(repo_id):
             d.update(dict(css_class='warning', status='invalid', text='invalid', hover='Invalid notebook'))
         return d
 
-    responses = [dict(user=student_repo.owner,
-                      repo=student_repo,
-                      responses={path: file_presentation(user_path_files.get((student_repo.owner.id, path), None), path)
-                                 for path in assignment_paths}
-                      )
-                 for student_repo in assignment_repo.forks]
+    assignments = assignment_repo.assignments
+    student_repos = assignment_repo.forks
+    responses = {assignment.id:
+                 {fork.owner.id: file_presentation(user_path_files.get((fork.owner.id, assignment.path), None), assignment.path)
+                  for fork in student_repos}
+                 for assignment in assignments}
 
-    return assignment_repo, responses
+    return AssignmentResponseViewModel(
+        assignment_repo,
+        sorted(assignments, key=lambda a: lexituples(a.name or a.path)),
+        [StudentViewModel(repo.owner, repo, repo.owner.fullname or repo.owner.login)
+         for repo in student_repos],
+        responses)
 
 
 def find_assignment(assignment_id):
@@ -157,4 +165,4 @@ def get_combined_notebook(assignment_id):
     assignment = get_assignment(assignment_id)
     answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})
                      for question in sorted(assignment.questions, key=lambda q: q.position)]
-    return AssignmentModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
+    return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)

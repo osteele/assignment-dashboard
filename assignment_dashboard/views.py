@@ -8,8 +8,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
-from .helpers import lexituples
-from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, update_repo_assignments
+from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, get_assignment_responses
 
 
 # Routes
@@ -26,25 +25,26 @@ def index():
 
 @app.route('/assignment_repo/<repo_id>')
 def assignment_repo(repo_id):
-    assignment_repo, responses = update_repo_assignments(repo_id)
+    model = get_assignment_responses(repo_id)
+    assignment_repo = model.assignment_repo
     return render_template(
         'assignment_repo.html',
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
-        assignments=sorted(assignment_repo.assignments, key=lambda a: lexituples(a.name or a.path)),
-        student_responses=sorted(responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
+        assignments=model.assignments,
+        students=sorted(model.students, key=lambda u: u.display_name.lower()),
+        responses=model.responses)
 
 
 @app.route('/assignment_repo/<repo_id>/report.csv')
 def assignment_repo_csv(repo_id):
-    assignment_repo, responses = update_repo_assignments(repo_id)
-    assignment_names = [a.name or a.path for a in assignment_repo.assignments]
+    model = get_assignment_responses(repo_id)
     df = pd.DataFrame({(assgn.name or assgn.path):
-                       {(rs['user'].fullname or rs['user'].login):
-                        rs['responses'].get(assgn.path, {}).get('status', None)
-                        for rs in responses}
-                       for assgn in assignment_repo.assignments},
-                      columns=sorted(assignment_names, key=lexituples))
+                       {student.display_name:
+                        model.responses[assgn.id][student.user.id].get('status', None)
+                        for student in model.students}
+                       for assgn in model.assignments},
+                      columns=[a.name or a.path for a in model.assignments])
     response = make_response(df.to_csv())
     now = date.today()
     filename = '%s Reading Journal Status.csv' % now.strftime('%Y-%m-%d')

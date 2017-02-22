@@ -29,13 +29,13 @@
         {% endfor %}
       </tr>
 
-      {% for row in student_responses %}
+      {% for student in students %}
         <tr>
-          <th><a href="{{ row.repo.html_url }}" title="View the student repo">{{ row.user.fullname or row.user.login }}</a></th>
+          <th><a href="{{ student.repo.html_url }}" title="View the student repo">{{ student.display_name }}</a></th>
           {% for assignment in assignments %}
-            {% set response = row.responses[assignment.path] %}
+            {% set response = responses[assignment.id][student.user.id] %}
             <td class="{{ response.css_class }}">
-              <a href="{{ row.repo.html_url }}/blob/master/{{ response.path }}" title="{{ response.hover }}">
+              <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="{{ response.hover }}">
                 {{ response.text }}
               </a>
             </td>
