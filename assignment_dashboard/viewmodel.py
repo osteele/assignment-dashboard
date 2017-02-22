@@ -67,15 +67,15 @@ def update_repo_assignments(repo_id):
 
     def file_presentation(file, path):
         if not file:
-            return dict(path=path, css_class='danger', text='missing', hover='Missing')
+            return dict(path=path, css_class='danger', status='missing', text='missing', hover='Missing')
 
-        d = dict(path=path, text=arrow.get(file.mod_time).humanize(), hover=file.mod_time)
+        d = dict(path=path, status='done', text=arrow.get(file.mod_time).humanize(), hover=file.mod_time)
         if file.sha == user_path_files[assignment_repo.owner.id, file.path].sha:
-            d.update(dict(css_class='danger', text='unchanged', hover='Unchanged from original'))
+            d.update(dict(css_class='danger', status='unchanged', text='unchanged', hover='Unchanged from original'))
         elif not file.file_content:
-            d.update(dict(css_class='danger', text='empty'))
+            d.update(dict(css_class='danger', status='empty', text='empty'))
         elif file.file_content.content_type != PYNB_MIME_TYPE:
-            d.update(dict(css_class='warning', text='invalid', hover='Invalid notebook'))
+            d.update(dict(css_class='warning', status='invalid', text='invalid', hover='Invalid notebook'))
         return d
 
     responses = [dict(user=student_repo.owner,

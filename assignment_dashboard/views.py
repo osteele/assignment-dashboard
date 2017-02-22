@@ -1,6 +1,7 @@
 import os
 
 import nbformat
+import pandas as pd
 from flask import make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
@@ -31,6 +32,21 @@ def assignment_repo(repo_id):
         assignment_repo=assignment_repo,
         assignments=sorted(assignment_repo.assignments, key=lambda a: lexituples(a.name or a.path)),
         student_responses=sorted(responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
+
+
+@app.route('/assignment_repo/<repo_id>.csv')
+def assignment_repo_csv(repo_id):
+    assignment_repo, responses = update_repo_assignments(repo_id)
+    assignment_names = [a.name or a.path for a in assignment_repo.assignments]
+    df = pd.DataFrame({(assgn.name or assgn.path):
+                       {rs['user'].login: rs['responses'].get(assgn.path, {}).get('status', None)
+                        for rs in responses}
+                       for assgn in assignment_repo.assignments},
+                      columns=sorted(assignment_names, key=lexituples))
+    response = make_response(df.to_csv())
+    response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % 'Reading Journal Status.csv'
+    response.headers['Content-Type'] = 'text/csv'
+    return response
 
 
 # HTML from HTMLExporter.from_notebook_node requests this

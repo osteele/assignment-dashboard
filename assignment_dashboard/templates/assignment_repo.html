@@ -15,6 +15,7 @@
       <div class="container">
         <h1><small>{{ assignment_repo.owner.login }} / {{ assignment_repo.name }}</small></h1>
         <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}} forks.</small></p>
+        <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
       </div>
     </div>
   </div>
