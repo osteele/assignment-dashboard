@@ -94,8 +94,9 @@ The [GitHub issues](https://github.com/osteele/assignment-dashboard/issues) list
 ### Tips
 
 `scripts/shell` starts a Python REPL with the globals in the `database` and
-`models` imported at top-level. This script uses the technique from
-[preconfigured interactive shell](http://flask.pocoo.org/snippets/23/).
+`models` imported at top-level. This script uses the techniques from
+[preconfigured interactive shell](http://flask.pocoo.org/snippets/23/)
+and [further improving the shell experience](http://flask.pocoo.org/docs/0.12/shell/#further-improving-the-shell-experience).
 
 ### Style
 
