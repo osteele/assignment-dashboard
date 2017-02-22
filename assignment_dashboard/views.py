@@ -8,7 +8,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
-from .viewmodel import find_assignment, get_combined_notebook, get_source_repos, get_assignment_responses
+from .viewmodel import find_assignment, get_assignment_responses, get_combined_notebook, get_source_repos
 
 
 # Routes
@@ -23,7 +23,7 @@ def index():
         return render_template('index.html', repos=repos)
 
 
-@app.route('/assignment_repo/<repo_id>')
+@app.route('/assignment_repo/<int:repo_id>')
 def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
@@ -36,7 +36,7 @@ def assignment_repo(repo_id):
         responses=model.responses)
 
 
-@app.route('/assignment_repo/<repo_id>/report.csv')
+@app.route('/assignment_repo/<int:repo_id>/report.csv')
 def assignment_repo_csv(repo_id):
     model = get_assignment_responses(repo_id)
     df = pd.DataFrame({(assgn.name or assgn.path):
@@ -59,26 +59,26 @@ def empty():
     return ''
 
 
-@app.route('/assignment/<assignment_id>')
+@app.route('/assignment/<int:assignment_id>')
 def assignment(assignment_id):
     assignment = find_assignment(assignment_id)
     return render_template('assignment.html', assignment=assignment, classroom_owner=assignment.repo.owner)
 
 
-@app.route('/assignment/<assignment_id>.ipynb.html')
+@app.route('/assignment/<int:assignment_id>.ipynb.html')
 def assignment_notebook(assignment_id):
     assignment = find_assignment(assignment_id)
     nb = nbformat.reads(assignment.content, NBFORMAT_VERSION)
     return HTMLExporter().from_notebook_node(nb)
 
 
-@app.route('/assignment/<assignment_id>/combined.ipynb.html')
+@app.route('/assignment/<int:assignment_id>/combined.ipynb.html')
 def combined_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     return HTMLExporter().from_notebook_node(model.collated_nb)
 
 
-@app.route('/assignment/<assignment_id>/combined.ipynb')
+@app.route('/assignment/<int:assignment_id>/combined.ipynb')
 def download_combined_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     collated_nb_name = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
@@ -89,7 +89,7 @@ def download_combined_assignment(assignment_id):
     return response
 
 
-@app.route('/assignment/<assignment_id>/answer_status.html')
+@app.route('/assignment/<int:assignment_id>/answer_status.html')
 def assignment_answer_status(assignment_id):
     status = get_combined_notebook(assignment_id).answer_status
     return render_template(
