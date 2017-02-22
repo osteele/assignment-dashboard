@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 import nbformat
 import pandas as pd
@@ -34,7 +35,7 @@ def assignment_repo(repo_id):
         student_responses=sorted(responses, key=lambda d: (d['user'].fullname or d['user'].login).lower()))
 
 
-@app.route('/assignment_repo/<repo_id>.csv')
+@app.route('/assignment_repo/<repo_id>/report.csv')
 def assignment_repo_csv(repo_id):
     assignment_repo, responses = update_repo_assignments(repo_id)
     assignment_names = [a.name or a.path for a in assignment_repo.assignments]
@@ -45,7 +46,9 @@ def assignment_repo_csv(repo_id):
                        for assgn in assignment_repo.assignments},
                       columns=sorted(assignment_names, key=lexituples))
     response = make_response(df.to_csv())
-    response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % 'Reading Journal Status.csv'
+    now = date.today()
+    filename = '%s Reading Journal Status.csv' % now.strftime('%Y-%m-%d')
+    response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % filename
     response.headers['Content-Type'] = 'text/csv'
     return response
 
