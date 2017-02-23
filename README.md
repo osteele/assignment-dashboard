@@ -22,11 +22,11 @@ Install Python 3.5 or greater. (Lesser versions of Python 3 will likely work but
 
 ### 2. Install required Python packages
 
-Install sqlite3.
+Install [sqlite3](https://www.sqlite.org).
 
 Then:
 
-    $ pip3 install -r requirements.txt
+    $ pip3 install -e .
 
 Depending on how Python is installed, you may need to prefix `pip3 install …` by `sudo`.
 
@@ -39,7 +39,7 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 4. Initialize the database
 
-    $ FLASK_APP=assignment_dashboard flask initdb
+    $ env FLASK_APP=assignment_dashboard flask initdb
 
 
 ## Usage
@@ -49,10 +49,9 @@ The web application browses the data in this database.
 
 ### Admin Tasks
 
-
 #### Update the database
 
-    $ FLASK_APP=assignment_dashboard flask updatedb
+    $ env FLASK_APP=assignment_dashboard flask updatedb
 
 This picks up new commits.
 
@@ -64,7 +63,7 @@ so if it is interrupted in the middle, it will pick up close to where it left of
 
 #### Set User Names
 
-      $ FLASK_APP=assignment_dashboard flask set_usernames usernames.csv
+      $ env FLASK_APP=assignment_dashboard flask set_usernames usernames.csv
 
 Update user names in the database from the rows in `usernames.csv`.
 
@@ -78,7 +77,7 @@ by the user's GitHub name if the GitHub name is not empty.
 
 ### Run the Web Application
 
-    $ FLASK_APP=assignment_dashboard flask run
+    $ env FLASK_APP=assignment_dashboard flask run
 
 Then browse to <http://localhost:4000>.
 
