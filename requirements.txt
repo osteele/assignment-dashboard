@@ -4,12 +4,12 @@ Jinja2>=2.8
 
 # Services
 PyGithub>=1.29
--e git+https://github.com/olin-computing/nbcollate.git@0.1#egg=nbcollate-0.1
-# -e git+https://github.com/olin-computing/nbcollate/archive/0.1.tar.gz#egg=nbcollate-0.1
+-e git+https://github.com/olin-computing/nbcollate.git@0.1.1#egg=nbcollate-0.1.1
 
 # Data Processing
 arrow>=0.10.0
 pandas>=0.19.2
+jupyter-client>=4.4.0
 
 # SQL
 sqlalchemy>=1.1.5

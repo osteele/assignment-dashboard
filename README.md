@@ -26,6 +26,7 @@ Install [sqlite3](https://www.sqlite.org).
 
 Then:
 
+    $ pip3 install -r requirements.txt
     $ pip3 install --process-dependency-links -e .
 
 Depending on how Python is installed, you may need to prefix `pip3 install …` by `sudo`.

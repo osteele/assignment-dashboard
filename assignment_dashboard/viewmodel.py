@@ -11,12 +11,13 @@ import arrow
 import nbformat
 from sqlalchemy.orm import joinedload
 
+from nbcollate import NotebookCollator
+
 from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .helpers import lexituples
 from .models import Assignment, AssignmentQuestion, AssignmentQuestionResponse, FileCommit, Repo
 from .nb_helpers import safe_read_notebook
-from .nbcollate import NotebookCollator
 
 AssignmentViewModel = namedtuple('AssignmentViewModel', 'assignment_path collated_nb answer_status')
 StudentViewModel = namedtuple('StudentViewModel', 'user repo display_name')
@@ -136,8 +137,8 @@ def get_assignment(assignment_id):
     assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
     owner_nb = notebooks[assignment.repo.owner.login]
 
-    collation = NotebookCollator(owner_nb, student_nbs)
-    answer_status = collation.report_missing_answers()
+    collator = NotebookCollator(owner_nb, student_nbs)
+    answer_status = collator.report_missing_answers()
 
     student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
     questions = [AssignmentQuestion(assignment_id=assignment_id,
@@ -151,7 +152,7 @@ def get_assignment(assignment_id):
     assignment.questions = []
     session.commit()
 
-    assignment.nb_content = nbformat.writes(collation.get_combined_notebook(clear_outputs=True))
+    assignment.nb_content = nbformat.writes(collator.get_collated_notebook(clear_outputs=True))
     assignment.questions = questions
     assignment.md5 = files_hash
 
