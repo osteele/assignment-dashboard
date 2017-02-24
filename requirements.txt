@@ -1,14 +1,16 @@
-arrow>=0.10.0
+# Flask
 Flask>=0.12
 Jinja2>=2.8
+
+# Services
 PyGithub>=1.29
-sqlalchemy>=1.1.5
-Flask-SQLAlchemy>=2.1
+-e git+https://github.com/olin-computing/nbcollate.git@0.1#egg=nbcollate-0.1
+# -e git+https://github.com/olin-computing/nbcollate/archive/0.1.tar.gz#egg=nbcollate-0.1
+
+# Data Processing
+arrow>=0.10.0
 pandas>=0.19.2
 
-# combine_notebooks
-cached_property>=1.3.0
-nbconvert>=5.1.1
-numpy>=1.11.1
-python-Levenshtein>=0.12.0
-jupyter>=1.0.0
+# SQL
+sqlalchemy>=1.1.5
+Flask-SQLAlchemy>=2.1

@@ -4,8 +4,11 @@ import re
 
 from setuptools import setup
 
+GIT_DEPENDENCY_RE = r'^(?:git\+)(.+)\.git@(.+?)(#egg=(.+)-(.+))'
 requirements_txt = open(os.path.join(os.path.dirname(__file__), 'requirements.txt')).read()
-requirements = re.findall(r'^([^\s#]+)', requirements_txt, re.M)
+requirements = re.findall(r'^(?:-e\s+)?([^\s#][^\s]+)', requirements_txt, re.M)
+install_requires = [re.sub(GIT_DEPENDENCY_RE, r'\4==\5', r) for r in requirements]
+dependency_links = [re.sub(GIT_DEPENDENCY_RE, r'\1/archive/\2.tar.gz\3', r) for r in requirements if re.match(GIT_DEPENDENCY_RE, r)]
 
 setup(name='assignment_dashboard',
       packages=['assignment_dashboard'],
@@ -25,5 +28,6 @@ setup(name='assignment_dashboard',
       author='Oliver Steele',
       author_email='steele@osteele.com',
       license='MIT',
-      install_requires=requirements
+      dependency_links=dependency_links,
+      install_requires=install_requires
       )
