@@ -5,7 +5,7 @@
 import hashlib
 import pickle
 import re
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 
 import arrow
 import nbformat
@@ -112,11 +112,11 @@ def get_assignment(assignment_id):
 
     Returns the assignment.
     """
-    assignment = session.query(Assignment). \
-        options(joinedload(Assignment.questions)). \
-        options(joinedload(Assignment.repo).joinedload(Repo.owner)). \
-        filter(Assignment.id == assignment_id). \
-        first()
+    assignment = (session.query(Assignment).
+        options(joinedload(Assignment.questions)).
+        options(joinedload(Assignment.repo).joinedload(Repo.owner)).
+        filter(Assignment.id == assignment_id).
+        first())
     assert assignment, "no assignment id=%s" % assignment_id
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
@@ -126,21 +126,24 @@ def get_assignment(assignment_id):
         return assignment
 
     # .options(undefer(FileCommit.file_content.content)) \
-    file_commits = [fc for fc in (session.query(FileCommit)
-                                  .options(joinedload(FileCommit.repo))
-                                  .options(joinedload(FileCommit.file_content))
-                                  .filter(FileCommit.path == assignment.path))
+    file_commits = [fc
+                    for fc in (session.query(FileCommit)
+                               .options(joinedload(FileCommit.repo))
+                               .options(joinedload(FileCommit.file_content))
+                               .filter(FileCommit.path == assignment.path))
                     if fc.repo]
 
     notebooks = {fc.repo.owner.login: safe_read_notebook(fc.content.decode())
                  for fc in file_commits
                  if fc.file_content}
 
-    student_nbs = {owner: nb for owner, nb in notebooks.items() if nb and owner != assignment.repo.owner.login}
-    assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
-    owner_nb = notebooks[assignment.repo.owner.login]
+    student_nbs = {owner: nb for owner, nb in notebooks.items()
+                   if nb and owner != assignment.repo.owner.login}
 
-    collator = NotebookCollator(owner_nb, student_nbs)
+    assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
+    assignment_nb = notebooks[assignment.repo.owner.login]
+
+    collator = NotebookCollator(assignment_nb, student_nbs)
     answer_status = collator.report_missing_answers()
 
     student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
@@ -170,3 +173,32 @@ def get_combined_notebook(assignment_id):
     answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})
                      for question in sorted(assignment.questions, key=lambda q: q.position)]
     return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
+
+
+# TODO DRY w/ get_assignment
+def get_collated_notebook_with_names(assignment_id):
+    assignment = get_assignment(assignment_id)
+
+    files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
+
+    file_commits = [fc
+                    for fc in (session.query(FileCommit)
+                               .options(joinedload(FileCommit.repo))
+                               .options(joinedload(FileCommit.file_content))
+                               .filter(FileCommit.path == assignment.path))
+                    if fc.repo]
+
+    assignment_owner_login = assignment.repo.owner.login
+    assignment_nb = safe_read_notebook(next(fc.content.decode() for fc in file_commits if fc.repo.owner.login == assignment_owner_login))
+    assert assignment_nb
+
+    student_nbs = {(fc.repo.owner.fullname or fc.repo.owner.login): safe_read_notebook(fc.content.decode())
+                   for fc in file_commits
+                   if fc.file_content and fc.repo.owner.login != assignment_owner_login}
+
+    student_nbs = OrderedDict((username, student_nbs[username])
+                              for username in sorted(student_nbs.keys(), key=lexituples)
+                              if student_nbs[username])
+
+    collator = NotebookCollator(assignment_nb, student_nbs)
+    return collator.get_collated_notebook(clear_outputs=True, include_usernames=True)

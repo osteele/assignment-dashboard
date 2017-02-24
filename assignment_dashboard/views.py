@@ -8,7 +8,8 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
-from .viewmodel import find_assignment, get_assignment_responses, get_combined_notebook, get_source_repos
+from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
+                        get_combined_notebook, get_source_repos)
 
 
 # Routes
@@ -75,14 +76,20 @@ def assignment_notebook(assignment_id):
     return HTMLExporter().from_notebook_node(nb)
 
 
-@app.route('/assignment/<int:assignment_id>/combined.ipynb.html')
-def combined_assignment(assignment_id):
+@app.route('/assignment/<int:assignment_id>/collated.ipynb.html')
+def collated_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     return HTMLExporter().from_notebook_node(model.collated_nb)
 
 
-@app.route('/assignment/<int:assignment_id>/combined.ipynb')
-def download_combined_assignment(assignment_id):
+@app.route('/assignment/<int:assignment_id>/named.ipynb.html')
+def collated_assignment_with_names(assignment_id):
+    nb = get_collated_notebook_with_names(assignment_id)
+    return HTMLExporter().from_notebook_node(nb)
+
+
+@app.route('/assignment/<int:assignment_id>/collated.ipynb')
+def download_collated_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     collated_nb_name = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
 
