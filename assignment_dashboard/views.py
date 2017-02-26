@@ -68,7 +68,10 @@ def assignment(assignment_id):
 @app.route('/assignment/<int:assignment_id>.ipynb.html')
 def assignment_notebook(assignment_id):
     assignment = find_assignment(assignment_id)
-    nb = nbformat.reads(assignment.content, NBFORMAT_VERSION)
+    content = assignment.content
+    if isinstance(content, bytes):
+        content = content.decode()
+    nb = nbformat.reads(content, NBFORMAT_VERSION)
     return HTMLExporter().from_notebook_node(nb)
 
 

@@ -31,8 +31,11 @@ def get_source_repos():
 def update_content_types(file_contents):
     for fc in file_contents:
         if fc.content_type is None:
+            content = fc.content
+            if isinstance(content, bytes):
+                content = content.decode()
             try:
-                nbformat.reads(fc.content, as_version=NBFORMAT_VERSION)  # for effect
+                nbformat.reads(content, as_version=NBFORMAT_VERSION)  # for effect
                 fc.content_type = PYNB_MIME_TYPE
             except nbformat.reader.NotJSONError:
                 fc.content_type = ''
