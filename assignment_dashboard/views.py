@@ -37,6 +37,9 @@ def assignment_repo(repo_id):
          ORDER BY commit_date DESC LIMIT 1''',
         {'source_id': 1}
     ).first()
+    # SQLITE3 This string format may not work for other RDBMS engines.
+    # This could be set to inspect the format, or the query above
+    # could be re-written to use the ORM.
     repo_update_time = datetime.strptime(commit_time[0], '%Y-%m-%d %H:%M:%S.%f') if commit_time else None
 
     return render_template(
