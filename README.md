@@ -24,13 +24,10 @@ For example: `pip install docker-compose`; or one of the installers [here](https
 [Create a personal GitHub API token](https://github.com/blog/1509-personal-api-tokens).
 Set the `GITHUB_API_TOKEN` environment variable to this value.
 
-### 3. Build the Docker image
-
-    docker build -t assignment-dashboard .
-
 ### 3. Initialize the database
 
-    docker run assignment-dashboard initdb
+    docker-compose run flask initdb
+
 
 ## Usage (using Docker)
 
@@ -41,7 +38,7 @@ The web application browses the data in this database.
 
 #### Update the database
 
-    $ docker run assignment-dashboard updatedb
+    $ docker-compose run flask updatedb
 
 This picks up new commits.
 
@@ -53,7 +50,7 @@ so if it is interrupted in the middle, it will pick up close to where it left of
 
 #### Set User Names
 
-    $ docker run assignment-dashboard set_usernames usernames.csv
+    $ docker-compose run flask set_usernames usernames.csv
 
 Update user names in the database from the rows in `usernames.csv`.
 
@@ -67,7 +64,7 @@ by the user's GitHub name if the GitHub name is not empty.
 
 ### Run the Web Application
 
-    $ docker run assignment-dashboard
+    $ docker-compose up
 
 Then browse to <http://localhost:5000>.
 
@@ -156,15 +153,10 @@ The [GitHub issues](https://github.com/osteele/assignment-dashboard/issues) list
 [preconfigured interactive shell](http://flask.pocoo.org/snippets/23/)
 and [further improving the shell experience](http://flask.pocoo.org/docs/0.12/shell/#further-improving-the-shell-experience).
 
-#### Docker
-
-Run the docker image with the app directory bound to your current directory like so:
-
-    docker run -v `pwd`:/app -p 5000:5000 -e GITHUB_API_TOKEN assignment-dashboard
-
-(This runs the the web server. Add `initdb`, `updatedb`, etc. to invoke a different command.)
-
-This picks up changes without having to re-build the image.
+Both the Docker and non-Docker strategies for running the application are set
+to reload the application when files are changed. (`FLASK_DEBUG` is set to `1`
+to set this for Flask. And, in Docker, the host directory is mounted to `/app`
+inside the image.)
 
 ### Style
 
