@@ -8,19 +8,77 @@ in tabular format.
 
 ## Status
 
-It works for me :-)
-
-Possible enhancements are listed [here](https://github.com/osteele/assignment-dashboard/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement),
-with the [next major milestone](https://github.com/osteele/assignment-dashboard/issues?utf8=✓&q=is%3Aopen%20is%3Aissue%20milestone%3A%22Web%201.0%22%20) being to run it in the cloud.
+Possible enhancements are listed [here](https://github.com/osteele/assignment-dashboard/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement).
 
 
-## Setup
+## Setup (using Docker)
+
+Do these once:
+
+### 1. Install docker-compose
+
+For example: `pip install docker-compose`; or one of the installers [here](https://docs.docker.com/compose/install/).
+
+### 2. Retrieve a GitHub personal API token
+
+[Create a personal GitHub API token](https://github.com/blog/1509-personal-api-tokens).
+Set the `GITHUB_API_TOKEN` environment variable to this value.
+
+### 3. Build the Docker image
+
+    docker build -t assignment-dashboard .
+
+### 3. Initialize the database
+
+    docker run assignment-dashboard initdb
+
+## Usage (using Docker)
+
+The admin tasks update the project database from GitHub.
+The web application browses the data in this database.
+
+### Admin Tasks
+
+#### Update the database
+
+    $ docker run assignment-dashboard updatedb
+
+This picks up new commits.
+
+This will take a while to run the first time.
+The next time it will skip commits that have already been ingested*, and will run faster.
+It also saves its work one repository at a time (and after each downloaded file),
+so if it is interrupted in the middle, it will pick up close to where it left off.
+
+
+#### Set User Names
+
+    $ docker run assignment-dashboard set_usernames usernames.csv
+
+Update user names in the database from the rows in `usernames.csv`.
+
+`usernames.csv` should be a CSV file with a column named "name" or "username",
+and a column that contains the string "git" (or mixed-case versions of these
+strings).
+
+Subsequent execution of `updatedb` will replace usernames in the database
+by the user's GitHub name if the GitHub name is not empty.
+
+
+### Run the Web Application
+
+    $ docker run assignment-dashboard
+
+Then browse to <http://localhost:5000>.
+
+
+## Setup (w/out Docker)
 
 ### 1. Install Python
 
 Install Python 3.5 or greater. (Lesser versions of Python 3 will likely work but are untested. Python 2 is right out.)
 
-### 2. Install required Python packages
+### 2. Install required packages
 
 Install [sqlite3](https://www.sqlite.org).
 
@@ -43,7 +101,7 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
     $ env FLASK_APP=assignment_dashboard flask initdb
 
 
-## Usage
+## Usage (w/out Docker)
 
 The admin tasks update the project database from GitHub.
 The web application browses the data in this database.
@@ -80,7 +138,7 @@ by the user's GitHub name if the GitHub name is not empty.
 
     $ env FLASK_APP=assignment_dashboard flask run
 
-Then browse to <http://localhost:4000>.
+Then browse to <http://localhost:5000>.
 
 File bugs and enhancement requests [here](https://github.com/osteele/assignment-dashboard/issues).
 
@@ -91,12 +149,22 @@ File bugs and enhancement requests [here](https://github.com/osteele/assignment-
 
 The [GitHub issues](https://github.com/osteele/assignment-dashboard/issues) lists bugs and enhancement requests.
 
-### Tips
+### How to Work
 
 `scripts/shell` starts a Python REPL with the globals in the `database` and
 `models` imported at top-level. This script uses the techniques from
 [preconfigured interactive shell](http://flask.pocoo.org/snippets/23/)
 and [further improving the shell experience](http://flask.pocoo.org/docs/0.12/shell/#further-improving-the-shell-experience).
+
+#### Docker
+
+Run the docker image with the app directory bound to your current directory like so:
+
+    docker run -v `pwd`:/app -p 5000:5000 -e GITHUB_API_TOKEN assignment-dashboard
+
+(This runs the the web server. Add `initdb`, `updatedb`, etc. to invoke a different command.)
+
+This picks up changes without having to re-build the image.
 
 ### Style
 
