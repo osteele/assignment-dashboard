@@ -1,5 +1,5 @@
 import os
-from datetime import date
+from datetime import date, datetime
 
 import nbformat
 import pandas as pd
@@ -7,6 +7,7 @@ from flask import make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
 from . import app
+from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
                         get_combined_notebook, get_source_repos)
@@ -28,10 +29,22 @@ def index():
 def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
+
+    commit_time = session.execute(
+        '''SELECT commit_date FROM `commit`
+         JOIN repo ON (repo_id)
+         WHERE repo.id == :source_id OR repo.source_id == :source_id
+         ORDER BY commit_date DESC LIMIT 1''',
+        {'source_id': 1}
+    ).first()
+    repo_update_time = datetime.strptime(commit_time[0], '%Y-%m-%d %H:%M:%S.%f') if commit_time else None
+
     return render_template(
         'assignment_repo.html',
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
+        repo_update_time=repo_update_time,
+        update_db_command='flask updatedb',
         assignments=model.assignments,
         students=sorted(model.students, key=lambda u: u.display_name.lower()),
         responses=model.responses)
