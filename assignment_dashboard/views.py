@@ -47,7 +47,6 @@ def assignment_repo(repo_id):
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
         repo_update_time=repo_update_time,
-        update_db_command='flask updatedb',
         assignments=model.assignments,
         students=sorted(model.students, key=lambda u: u.display_name.lower()),
         responses=model.responses)

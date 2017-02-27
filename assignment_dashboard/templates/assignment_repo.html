@@ -5,6 +5,7 @@
   <nav class="navbar navbar-fixed-top">
     <ol class="breadcrumb">
       <li>{{ classroom_owner.login }}</li>
+      <li>{{ assignment_repo.name }}</li>
     </ol>
   </nav>
 {% endblock %}
@@ -13,11 +14,10 @@
   <div class="container">
     <div class="jumbotron">
       <div class="container">
-        <h1><small>{{ assignment_repo.owner.login }} / {{ assignment_repo.name }}</small></h1>
-        <p><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}} forks.</small></p>
+        <h1><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}}</small></h1>
         <p>
           {% if repo_update_time %}The last commit is from {{ repo_update_time.strftime('%l:%M%P, %B %d') }}.{% endif %}
-          Execute <code>{{ update_db_command }}</code> to update.</p>
+          Execute the <code>updatedb</code> command to update the database.</p>
         <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
       </div>
     </div>
