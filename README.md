@@ -2,15 +2,17 @@
 
 Assignment Dashboard is a Flask web application that displays Jupyter files within a GitHub "assignment" repository, and their status within each forked "student" repository.
 
-<a href=""./docs/images/repo.jpeg"><img src="./docs/images/repo.jpeg" width="500"/></a>
-
 The app displays whether files are present in the student repository; if so, whether they have been changed, and whether they are valid Jupyter notebook files. Student repositories and files are linked to GitHub.
 
-<a href=""./docs/images/collated.jpeg"><img src="./docs/images/collated.jpeg" width="250"/></a>
+<a href=""./docs/images/repo.jpeg"><img src="./docs/images/repo.jpeg" width="640"/></a>
 
 Clicking on an assignment title displays a collated notebook, with all student answers collected beneath each prompt.
 
-<a href=""./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="250"/></a>
+<a href=""./docs/images/collated.jpeg"><img src="./docs/images/collated.jpeg" width="320"/></a>
+
+The app also displays additional information about each assignment.
+
+<a href=""./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="320"/></a>
 
 ## Status
 
@@ -96,8 +98,11 @@ Then browse to <http://localhost:5000>.
 File bugs and enhancement requests [here](https://github.com/osteele/assignment-dashboard/issues).
 
 
-## Contributions
-
-The notebook collation code is derived from original work ([paulruvolo/SoftDesSp16Prep](https://github.com/paulruvolo/SoftDesSp16Prep)) by Paul Ruvolo at Olin College, further modified at [osteele/assignment-tools](https://github.com/osteele/assignment-tools).
+## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+
+## Acknowledgments
+
+The notebook collation code is derived from original work ([paulruvolo/SoftDesSp16Prep](https://github.com/paulruvolo/SoftDesSp16Prep)) by Paul Ruvolo at Olin College, further modified at [osteele/assignment-tools](https://github.com/osteele/assignment-tools).
