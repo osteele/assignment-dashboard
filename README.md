@@ -1,12 +1,22 @@
 # Assignment Dashboard
 
-A web app that displays the forks of files in a GitHub repository (currently hardwired to `sd17spring/ReadingJournal`),
-in tabular format.
+Assignment Dashboard is a Flask web application that displays Jupyter files within a GitHub "assignment" repository, and their status within each forked "student" repository.
 
-![](./docs/images/repo.jpg)
-![](./docs/images/collated.jpg)
-![](./docs/images/answer-table.jpg)
+<a href=""./docs/images/repo.jpeg"><img src="./docs/images/repo.jpeg" width="500"/></a>
 
+The app displays whether files are present in the student repository; if so, whether they have been changed, and whether they are valid Jupyter notebook files. Student repositories and files are linked to GitHub.
+
+<a href=""./docs/images/collated.jpeg"><img src="./docs/images/collated.jpeg" width="250"/></a>
+
+Clicking on an assignment title displays a collated notebook, with all student answers collected beneath each prompt.
+
+<a href=""./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="250"/></a>
+
+## Status
+
+The assignment repository is currently hardwired to `sd17spring/ReadingJournal`.
+
+The application does not use authentication, so it should not be run on the open web or in a shared location. (Technically it does not expose any information that is not openly available from the GitHub web interface and API, but it makes this information easier to find.)
 
 ## Setup (using Docker)
 
