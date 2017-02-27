@@ -113,10 +113,10 @@ def get_assignment(assignment_id):
     Returns the assignment.
     """
     assignment = (session.query(Assignment).
-        options(joinedload(Assignment.questions)).
-        options(joinedload(Assignment.repo).joinedload(Repo.owner)).
-        filter(Assignment.id == assignment_id).
-        first())
+                  options(joinedload(Assignment.questions)).
+                  options(joinedload(Assignment.repo).joinedload(Repo.owner)).
+                  filter(Assignment.id == assignment_id).
+                  first())
     assert assignment, "no assignment id=%s" % assignment_id
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
@@ -170,7 +170,7 @@ def get_assignment(assignment_id):
 
 def get_combined_notebook(assignment_id):
     assignment = get_assignment(assignment_id)
-    answer_status = [(question.question_name, {response.user.login: response.status for response in question.responses})
+    answer_status = [(question.question_name, {(response.user.fullname or response.user.login): response.status for response in question.responses})
                      for question in sorted(assignment.questions, key=lambda q: q.position)]
     return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
 
@@ -178,8 +178,6 @@ def get_combined_notebook(assignment_id):
 # TODO DRY w/ get_assignment
 def get_collated_notebook_with_names(assignment_id):
     assignment = get_assignment(assignment_id)
-
-    files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
 
     file_commits = [fc
                     for fc in (session.query(FileCommit)
