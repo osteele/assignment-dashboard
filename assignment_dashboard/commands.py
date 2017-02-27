@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from collections import defaultdict
 
 import click
@@ -25,6 +26,13 @@ def initdb():
 @click.option('--users', help="Restrict to logins in this comma-separated list")
 def updatedb(**kwargs):
     """Update the database from GitHub."""
+    token_name = 'GITHUB_API_TOKEN'
+    if token_name not in os.environ:
+        print("Error: %s isn't set." % token_name)
+        print("Visit https://github.com/settings/tokens/new to create a GitHub personal access token")
+        print("and set the %s environment variable to it." % token_name)
+        sys.exit(1)
+
     # TODO modify update_database() to take kwargs. currently the module reads environs
     for k, v in kwargs.items():
         k = {'users': 'user_filter'}.get(k, k)
@@ -76,7 +84,6 @@ def set_usernames(csv_filename):
 @click.option('--clear', is_flag=True, help="Unset user names")
 def set_fake_usernames(clear):
     """Set usernames to values from a fake."""
-    import sys
     try:
         from faker import Faker
     except ModuleNotFoundError as e:
