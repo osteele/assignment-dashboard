@@ -15,9 +15,8 @@
     <div class="jumbotron">
       <div class="container">
         <h1><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}}</small></h1>
-        <p>
-          {% if repo_update_time %}The last commit is from {{ repo_update_time.strftime('%l:%M%P, %B %d') }}.{% endif %}
-          Execute the <code>updatedb</code> command to update the database.</p>
+        <p><small>{% if repo_update_time %}The last commit is from {{ repo_update_time.strftime('%l:%M%P, %B %d') }}.{% endif %}</small></p>
+        <p><small>Execute the <tt>flask updatedb</tt> command to update the database.</small></p>
         <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
       </div>
     </div>

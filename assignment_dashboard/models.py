@@ -81,6 +81,10 @@ class Repo(Base):
         return "<Repo %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'] if k)
 
     @property
+    def full_name(self):
+        return '/'.join([self.owner.login, self.name])
+
+    @property
     def html_url(self):
         return "https://github.com/%s/%s" % (self.owner.login, self.name)
 

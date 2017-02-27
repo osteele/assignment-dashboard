@@ -14,8 +14,6 @@ Clicking on an assignment title displays a collated notebook, with all student a
 
 ## Status
 
-The assignment repository is currently hardwired to `sd17spring/ReadingJournal`.
-
 The application does not use authentication, so it should not be run on the open web or in a shared location. (Technically it does not expose any information that is not openly available from the GitHub web interface and API, but it makes this information easier to find.)
 
 ## Setup
@@ -48,6 +46,12 @@ It will take a while to run, as Docker creates the application image.
 
 If you subsequently need to run it again in order to reset the database, it will use this existing image.
 
+### 4. Add an assignment repository
+
+    $ docker-compose run flask add_repo repo_owner/repo_name
+
+Add a repository to the database, and download its information from GitHub.
+
 ## Usage
 
 These instructions use Docker.
@@ -66,13 +70,7 @@ The web application browses the data in this database.
 
     $ docker-compose run flask updatedb
 
-This updates the application database with new users and commits from GitHub.
-
-This will take a while to run the first time.
-The next time it will skip commits that have already been ingested*, and will run faster.
-It also saves its work one repository at a time (and after each downloaded file),
-so if it is interrupted in the middle, it will pick up close to where it left off.
-
+Update the application database with new users and commits from GitHub.
 
 #### Set User Names
 

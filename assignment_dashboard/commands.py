@@ -8,7 +8,16 @@ import pandas as pd
 
 from . import app
 from .database import db, session
-from .models import Assignment, User
+from .models import Assignment, Repo, User
+
+
+def assert_github_token():
+    token_name = 'GITHUB_API_TOKEN'
+    if token_name not in os.environ:
+        print("Error: %s isn't set." % token_name, file=sys.stderr)
+        print("Visit https://github.com/settings/tokens/new to create a GitHub personal access token", file=sys.stderr)
+        print("and set the %s environment variable to it." % token_name, file=sys.stderr)
+        sys.exit(1)
 
 
 @app.cli.command()
@@ -17,20 +26,27 @@ def initdb():
     db.drop_all()
     db.create_all()
 
+@app.cli.command()
+@click.argument('repo_name')
+def add_repo(repo_name):
+    """Add a repository to the database."""
+    assert_github_token()
+    from .update_database import add_repo  # noqa: F401
+    add_repo(repo_name)
+
 
 @app.cli.command()
 @click.option('--repo-limit', help="Limit the number of repos.")
 @click.option('--commit-limit', help="Limit the number of commits.")
-@click.option('--repo', help="The name of the repo in org/name format")
 @click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
 @click.option('--users', help="Restrict to logins in this comma-separated list")
 def updatedb(**kwargs):
     """Update the database from GitHub."""
-    token_name = 'GITHUB_API_TOKEN'
-    if token_name not in os.environ:
-        print("Error: %s isn't set." % token_name)
-        print("Visit https://github.com/settings/tokens/new to create a GitHub personal access token")
-        print("and set the %s environment variable to it." % token_name)
+    assert_github_token()
+    repos = session.query(Repo).filter(Repo.source_id.is_(None)).all()
+    if not repos:
+        print("Error: REPO_NAME not specified")
+        print("Run add_repo to add an assignment repository.")
         sys.exit(1)
 
     # TODO modify update_database() to take kwargs. currently the module reads environs
@@ -40,7 +56,9 @@ def updatedb(**kwargs):
             os.environ[k.upper()] = str(v)
     # do the import after the environs have been set
     from .update_database import update_db  # noqa: F401
-    update_db()
+    for repo in repos:
+        print("Updating %s" % repo.full_name)
+        update_db(repo.full_name)
 
 
 @app.cli.command()
@@ -53,10 +71,10 @@ def delete_assignments_cache():
 
 
 @app.cli.command()
-@click.argument('csv_filename')
+@click.argument('csv_filename', type=click.Path(exists=True))
 def set_usernames(csv_filename):
     """Set usernames to values from a CSV file."""
-    df = pd.DataFrame.from_csv(csv_filename, index_col=None)
+    df = pd.DataFrame.from_csv(click.format_filename(csv_filename), index_col=None)
     name_col = next(col for col in df.columns if re.match(r'(user ?)?names?', col, re.I))
     github_col = next(col for col in df.columns if re.search(r'git', col, re.I))
     logins = set(df[github_col])

@@ -16,6 +16,9 @@ from datetime import timedelta
 
 import arrow
 from github import Github
+# main
+#
+from sqlalchemy.orm import joinedload
 
 from .database import session
 from .models import Commit, FileCommit, FileContent, Repo, User
@@ -32,12 +35,9 @@ REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False'
 REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
-if not GITHUB_API_TOKEN:
-    print("warning: GITHUB_API_TOKEN is not defined. API calls are rate-limited.", file=sys.stderr)
+assert GITHUB_API_TOKEN
 
 gh = Github(GITHUB_API_TOKEN)
-
-source_repo_name = os.environ.get('REPO', 'sd17spring/ReadingJournal')
 
 
 # helpers
@@ -76,9 +76,9 @@ def own_commit(repo, commit):
 # read the repos
 #
 
-def get_instructor_logins(repo):
+def get_instructor_logins(source_repo):
     print('fetching instructor logins')
-    organization_name = source_repo_name.split('/')[0]
+    organization_name = source_repo.full_name.split('/')[0]
     return {user.login
             for team in gh.get_organization(organization_name).get_teams()
             for user in team.get_members()}
@@ -92,9 +92,6 @@ def get_forks(source_repo, ignore_logins=None):
     repos = [repo for repo in source_repo.get_forks()
              if repo.owner.login not in ignore_logins]
 
-    if USER_FILTER:
-        repos = [repo for repo in repos if repo.owner.login in USER_FILTER]
-
     return repos
 
 
@@ -104,7 +101,7 @@ def get_forks(source_repo, ignore_logins=None):
 user_instance_map = {}
 
 
-def save_users(users, role='student'):
+def save_users(users, role='student', verbose=True):
     print('updating students')
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
@@ -161,7 +158,7 @@ def save_repos(source_repo, repos):
 #
 
 
-def get_new_repo_commits(repo):
+def get_new_repo_commits(repo, commit_limit=None):
     saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
     saved_commit_shas = {commit.sha for commit in saved_commits}
 
@@ -180,8 +177,8 @@ def get_new_repo_commits(repo):
                     for commit in repo.get_commits(**get_commit_kwargs(repo))
                     if commit.sha not in saved_commit_shas]
 
-    if COMMIT_LIMIT:
-        repo_commits = repo_commits[:COMMIT_LIMIT]
+    if commit_limit:
+        repo_commits = repo_commits[:commit_limit]
 
     if REPORT_FILE_SHAS:
         print('commits for %s:' % REPORT_FILE_SHAS,
@@ -196,7 +193,7 @@ def get_new_repo_commits(repo):
     if saved_commits:
         messages.append("ignoring %d previous commits" % len(saved_commits))
     if messages:
-        print(";".join(messages))
+        print("; ".join(messages))
 
     return repo_commits
 
@@ -277,8 +274,8 @@ def record_repo_commits(repo, repo_commits):
     session.commit()
 
 
-def update_repo_files(repo, all_commits=False):
-    repo_commits = get_new_repo_commits(repo)
+def update_repo_files(repo, all_commits=False, commit_limit=None):
+    repo_commits = get_new_repo_commits(repo, commit_limit=COMMIT_LIMIT)
     if not repo_commits:
         return
     file_commit_recs = get_file_commit_recs(repo, repo_commits, all_commits=all_commits)
@@ -288,14 +285,24 @@ def update_repo_files(repo, all_commits=False):
     update_file_commits(repo, file_commit_recs)
     record_repo_commits(repo, repo_commits)
 
-# main
-#
+
+def add_repo(repo_name):
+    owner_login, shortname = repo_name.split('/')
+    instance = (session.query(Repo).options(joinedload(Repo.owner))
+                .filter(User.login==owner_login)
+                .filter(Repo.name==shortname)).first()
+    assert not instance.source_id
+    update_db(repo_name)
 
 
-def update_db():
+def update_db(source_repo_name):
     source_repo = gh.get_repo(source_repo_name)
+    repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     forks = get_forks(source_repo)
-    save_users([source_repo.owner], role='organization')
+    if USER_FILTER:
+        repos = [repo for repo in repos if repo.owner.login in USER_FILTER]
+
+    save_users([source_repo.owner], role='organization', verbose=False)
     save_users([repo.owner for repo in forks], role='student')
     save_repos(source_repo, forks)
 
@@ -305,4 +312,4 @@ def update_db():
 
     for i, repo in enumerate(repos):
         print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
-        update_repo_files(repo, all_commits=(repo == source_repo))
+        update_repo_files(repo, all_commits=(repo == source_repo), commit_limit=COMMIT_LIMIT)

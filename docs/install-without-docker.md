@@ -32,6 +32,10 @@ and set the `GITHUB_API_TOKEN` environment variable to this value.
 
     $ env FLASK_APP=assignment_dashboard flask initdb
 
+### 5. Add an assignment repository
+
+    $ env FLASK_APP=assignment_dashboard add_repo repo_owner/repo_name
+
 
 ## Usage
 
