@@ -12,7 +12,7 @@ from .models import Assignment, User
 
 @app.cli.command()
 def initdb():
-    click.echo("Initializing the database.")
+    """Initialize the database."""
     db.drop_all()
     db.create_all()
 
@@ -24,7 +24,7 @@ def initdb():
 @click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
 @click.option('--users', help="Restrict to logins in this comma-separated list")
 def updatedb(**kwargs):
-    click.echo("Updating the database.")
+    """Update the database from GitHub."""
     # TODO modify update_database() to take kwargs. currently the module reads environs
     for k, v in kwargs.items():
         k = {'users': 'user_filter'}.get(k, k)
@@ -37,6 +37,7 @@ def updatedb(**kwargs):
 
 @app.cli.command()
 def delete_assignments_cache():
+    """Delete the assignments cache."""
     q = Assignment.query
     click.echo("Deleting %d assignment caches." % q.count())
     q.delete()
@@ -46,6 +47,7 @@ def delete_assignments_cache():
 @app.cli.command()
 @click.argument('csv_filename')
 def set_usernames(csv_filename):
+    """Set usernames to values from a CSV file."""
     df = pd.DataFrame.from_csv(csv_filename, index_col=None)
     name_col = next(col for col in df.columns if re.match(r'(user ?)?names?', col, re.I))
     github_col = next(col for col in df.columns if re.search(r'git', col, re.I))
@@ -67,4 +69,20 @@ def set_usernames(csv_filename):
             users[login].fullname = name
             counts['updated'] += 1
     session.commit()
-    print(";".join("%d records %s" % (v, k) for k, v in counts.items()))
+    print("; ".join("%d records %s" % (v, k) for k, v in counts.items()))
+
+
+@app.cli.command()
+@click.option('--clear', is_flag=True, help="Unset user names")
+def set_fake_usernames(clear):
+    """Set usernames to values from a fake."""
+    import sys
+    try:
+        from faker import Faker
+    except ModuleNotFoundError as e:
+        print("%s: pip install Faker" % e, file=sys.stderr)
+        sys.exit(1)
+    fake = Faker()
+    for user in session.query(User).filter(User.role == 'student').all():
+        user.fullname = fake.name()
+    session.commit()
