@@ -82,7 +82,8 @@ def get_assignment_responses(repo_id):
         elif not file.file_content:
             d.update(dict(css_class='danger', status='empty', text='empty'))
         elif file.file_content.content_type != PYNB_MIME_TYPE:
-            d.update(dict(css_class='warning', status='invalid', text='invalid', hover='Invalid notebook'))
+            d.update(dict(css_class='warning', status='invalid', text='invalid',
+                          hover='Invalid Jupyter notebook (merge conflict?)'))
         return d
 
     assignments = assignment_repo.assignments

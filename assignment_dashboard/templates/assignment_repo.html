@@ -34,7 +34,7 @@
 
       {% for student in students %}
         <tr>
-          <th><a href="{{ student.repo.html_url }}" title="View the student repo">{{ student.display_name }}</a></th>
+          <th><a href="{{ student.repo.html_url }}" title="View the student repo on GitHub">{{ student.display_name }}</a></th>
           {% for assignment in assignments %}
             {% set response = responses[assignment.id][student.user.id] %}
             <td class="{{ response.css_class }}">
