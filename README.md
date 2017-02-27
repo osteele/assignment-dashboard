@@ -3,7 +3,9 @@
 A web app that displays the forks of files in a GitHub repository (currently hardwired to `sd17spring/ReadingJournal`),
 in tabular format.
 
-![](./docs/screenshot.png)
+![](./docs/images/repo.jpg)
+![](./docs/images/collated.jpg)
+![](./docs/images/answer-table.jpg)
 
 
 ## Setup (using Docker)
