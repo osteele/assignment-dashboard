@@ -1,7 +1,5 @@
-from flask import Flask
+# flake8: noqa
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+from assignment_dashboard.app import app
 import assignment_dashboard.commands  # isort:skip
 import assignment_dashboard.views  # isort:skip
