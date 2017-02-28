@@ -10,6 +10,22 @@ MD5_HASH_CONSTRAINT = CheckConstraint('length(md5) = 32')
 SHA_HASH_CONSTRAINT = CheckConstraint('length(sha) = 40')
 
 
+def base__repr__(self):
+    def short_enough(v):
+        if not isinstance(v, str):
+            return True
+        return len(v) < 100
+
+    cols = [c.name for c in self.__table__.columns]
+    attrs = {k: getattr(self, k) for k in cols}
+    return "<{} {})>".format(
+        self.__class__.__name__,
+        ', '.join("%s=%r" % (k, v)
+                  for k, v in attrs.items()
+                  if v and short_enough(v)))
+Base.__repr__ = base__repr__
+
+
 # These mirror GitHub
 #
 
@@ -31,9 +47,6 @@ class FileCommit(Base):
     def content(self):
         return self.file_content.content
 
-    def __repr__(self):
-        return "<FileCommit %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'path', 'repo_id', 'mod_time'] if k)
-
 
 class FileContent(Base):
     __tablename__ = 'file_content'
@@ -42,9 +55,6 @@ class FileContent(Base):
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True, unique=True)
     content_type = Column(String(40), nullable=True)
     content = deferred(Column(Text, nullable=True))
-
-    def __repr__(self):
-        return "<FileContent %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'sha', 'content_type'] if k)
 
 
 class User(Base):
@@ -58,9 +68,6 @@ class User(Base):
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
     status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
     repos = relationship('Repo', backref='owner')
-
-    def __repr__(self):
-        return "<User %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'login', 'role'] if k)
 
 
 class Repo(Base):
@@ -76,9 +83,6 @@ class Repo(Base):
     source = relationship('Repo', remote_side=[id])
     forks = relationship('Repo')
     commits = relationship('Commit', backref='repo')
-
-    def __repr__(self):
-        return "<Repo %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'owner_id', 'source_id'] if k)
 
     @property
     def full_name(self):
@@ -97,9 +101,6 @@ class Commit(Base):
     repo_id = Column(Integer, ForeignKey('repo.id'), nullable=False, index=True)
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
-
-    def __repr__(self):
-        return "<Commit %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'repo_id', 'sha'] if k)
 
 
 # Assignment-related models
@@ -122,9 +123,6 @@ class Assignment(Base):
     # file = relationship('FileContent',
     #                     primaryjoin=and_(Assignment.repo_id == FileCommit.repo_id, Assignment.path == FileCommit.path),
     #                     foreign_keys=[repo_id, path])
-
-    def __repr__(self):
-        return "<Assignment %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'name', 'repo_id', 'path'] if k)
 
     @property
     def content(self):
@@ -151,9 +149,6 @@ class AssignmentQuestion(Base):
 
     assignment = relationship('Assignment', backref=backref('questions', cascade='all, delete-orphan'))
 
-    def __repr__(self):
-        return "<AssignmentQuestion %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'assignment_id', 'repo_id', 'path'] if k)
-
 
 class AssignmentQuestionResponse(Base):
     __tablename__ = 'assignment_question_response'
@@ -167,6 +162,3 @@ class AssignmentQuestionResponse(Base):
 
     question = relationship('AssignmentQuestion', backref=backref('responses', cascade='all, delete-orphan'))
     user = relationship('User')
-
-    def __repr__(self):
-        return "<AssignmentQuestionResponse %s>" % ' '.join('%s=%r' % (k, getattr(self, k)) for k in ['id', 'assignment_question_id', 'user_id'] if k)
