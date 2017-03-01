@@ -27,8 +27,9 @@
 
 {% block content %}
   <div>
-    <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
+    <a class="btn btn-default btn-sm" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV <i class="fa fa-table" aria-hidden="true"></i></a>
   </div>
+
   <table class="table table-condensed table-striped">
     <tr>
       <th></th>

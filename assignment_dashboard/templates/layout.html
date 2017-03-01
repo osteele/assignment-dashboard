@@ -15,11 +15,23 @@
   </head>
 
   <body>
-    <nav class="navbar navbar-fixed-top">
-      <ol class="breadcrumb">
+    <nav class="navbar navbar-default navbar-static-top" role="navigation">
+      <ol class="breadcrumb pull-left">
         {% block breadcrumbs %}{% endblock %}
       </ol>
 
+      <div class="pull-right">
+        {% if g.user %}
+          {% if g.user.avatar_url %}
+            <img class="avatar" src="{{g.user.avatar_url}}" width="20">
+          {% else %}
+            {{ g.user.fullname or g.user.login }}
+          {%endif%}
+          <a class="btn btn-default btn-sm" title="Sign Out" href="{{ url_for('logout') }}"><i class="fa fa-sign-out" aria-hidden="true"></i></a>
+        {% else %}
+          <a class="btn btn-default btn-sm" title="Sign In" href="{{ url_for('login') }}"><i class="fa fa-sign-in" aria-hidden="true"></i></a>
+        {% endif %}
+      </div>
     </nav>
 
     {% block header %}{% endblock %}
