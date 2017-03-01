@@ -13,6 +13,13 @@ from .models import User
 github = flask_github.GitHub(app)
 
 
+@github.access_token_getter
+def token_getter():
+    user = g.user
+    if 'gh_access_token' is not None:
+        return user.github_access_token
+
+
 @app.before_request
 def before_request():
     g.user = None
