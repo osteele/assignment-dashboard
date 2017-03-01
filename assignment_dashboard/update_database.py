@@ -31,7 +31,6 @@ COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 USER_FILTER = list(filter(None, os.environ.get('USER_FILTER', '').split(',')))
 
 REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False', '0')
-REPORT_FILE_SHAS = None  # e.g. 'day3_reading_journal.ipynb'
 
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
 assert GITHUB_API_TOKEN
@@ -199,13 +198,6 @@ def get_new_repo_commits(repo, commit_limit=None):
     if commit_limit:
         repo_commits = repo_commits[:commit_limit]
 
-    if REPORT_FILE_SHAS:
-        print('commits for %s:' % REPORT_FILE_SHAS,
-              [item.sha
-               for commit in reversed(repo_commits)
-               for item in commit.files
-               if item.filename == REPORT_FILE_SHAS])
-
     messages = []
     if repo_commits:
         messages.append("processing %d new commits" % len(repo_commits))
@@ -226,10 +218,6 @@ def get_file_commit_recs(repo, repo_commits, all_commits=False):
         if item.sha)
 
     print('processing %d file commits' % len(file_commit_recs))
-
-    if REPORT_FILE_SHAS:
-        print('filtered commits for %s:' % REPORT_FILE_SHAS,
-              [item.file.sha for item in file_commit_recs if item.file.filename == REPORT_FILE_SHAS])
 
     return file_commit_recs
 
