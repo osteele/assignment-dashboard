@@ -107,6 +107,14 @@ class Repo(Base):
     def html_url(self):
         return "https://github.com/%s/%s" % (self.owner.login, self.name)
 
+    @property
+    def is_fork(self):
+        return bool(self.source_id)
+
+    @property
+    def is_source(self):
+        return not self.source_id
+
 
 class Commit(Base):
     __tablename__ = 'commit'

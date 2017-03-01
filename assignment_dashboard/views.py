@@ -4,7 +4,7 @@ from datetime import date
 import arrow
 import nbformat
 import pandas as pd
-from flask import make_response, redirect, render_template, url_for
+from flask import g, make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
 from . import app
@@ -24,7 +24,7 @@ TZ = os.environ.get('TZ', 'US/Eastern')
 @app.route('/')
 @login_required
 def index():
-    repos = get_source_repos()
+    repos = get_source_repos(g.user)
     if len(repos) == 1:
         return redirect(url_for('assignment_repo', repo_id=repos[0].id))
     else:

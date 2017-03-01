@@ -24,7 +24,12 @@ StudentViewModel = namedtuple('StudentViewModel', 'user repo display_name')
 AssignmentResponseViewModel = namedtuple('AssignmentResponseViewModel', 'assignment_repo assignments students responses')
 
 
-def get_source_repos():
+def get_source_repos(user):
+    # PERF replace this by a single query; probably not using the ORM
+    return [r
+            for org in user.organizations
+            for r in org.repos
+            if r.is_source]
     return session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(None)).all()
 
 
