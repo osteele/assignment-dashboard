@@ -1,6 +1,7 @@
 import os
 
-from sqlalchemy import CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text,
+                        UniqueConstraint)
 from sqlalchemy.orm import backref, deferred, relationship
 
 from .database import Base
@@ -56,6 +57,10 @@ class FileContent(Base):
     content_type = Column(String(40), nullable=True)
     content = deferred(Column(Text, nullable=True))
 
+organization_users_table = Table('organization_users', Base.metadata,
+    Column('organization_id', ForeignKey('user.id'), primary_key=True),
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+)
 
 class User(Base):
     __tablename__ = 'user'
@@ -64,10 +69,20 @@ class User(Base):
     login = Column(String(100), nullable=False, index=True, unique=True)
     fullname = Column(String(100))
     avatar_url = Column(String(1024))
+    gh_type = Column(Enum('Organization', 'User'))
 
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
     status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
     repos = relationship('Repo', backref='owner')
+
+    members = relationship('User', secondary=organization_users_table,
+                           primaryjoin=id==organization_users_table.c.user_id,
+                           secondaryjoin=id==organization_users_table.c.organization_id,
+                           back_populates='organizations')
+    organizations = relationship('User', secondary=organization_users_table,
+                                 primaryjoin=id == organization_users_table.c.organization_id,
+                                 secondaryjoin=id == organization_users_table.c.user_id,
+                                 back_populates='members')
 
 
 class Repo(Base):

@@ -76,10 +76,18 @@ def own_commit(repo, commit):
 
 def get_instructor_logins(source_repo):
     print('Reading organization members from GitHub')
-    organization_name = source_repo.full_name.split('/')[0]
-    return {user.login
-            for team in gh.get_organization(organization_name).get_teams()
-            for user in team.get_members()}
+    org_name = source_repo.full_name.split('/')[0]
+    org_instance = session.query(User).filter(User.login==org_name).first()
+    members = [u for u in gh.get_organization(org_name).get_members()]
+    save_users(members, role='instructor')
+
+    for member in members:
+        member_instance = get_user_instance(member)
+        if org_instance not in member_instance.organizations:
+            member_instance.organizations.append(org_instance)
+    session.commit()
+
+    return {u.login for u in members}
 
 
 def get_forks(source_repo, ignore_logins=None):
@@ -99,14 +107,14 @@ def get_forks(source_repo, ignore_logins=None):
 user_instance_map = {}
 
 
-def save_users(users, role='student', verbose=True):
-    if verbose:
-        print('Updating students in database')
+def save_users(users, role='student'):
+    print('Updating %ss in database' % role)
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
     for user in users:
         attrs = dict(login=user.login,
                      avatar_url=user.avatar_url or repo.owner.gravatar_url,
+                     gh_type=user.type,
                      role=role,
                      **dict(fullname=user.name) if user.name else {})
 
@@ -311,7 +319,7 @@ def update_db(source_repo_name):
     if USER_FILTER:
         repos = [repo for repo in repos if repo.owner.login in USER_FILTER]
 
-    save_users([source_repo.owner], role='organization', verbose=False)
+    save_users([source_repo.owner], role='organization')
     save_users([repo.owner for repo in forks], role='student')
     save_repos(source_repo, forks)
 
