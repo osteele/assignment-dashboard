@@ -25,11 +25,7 @@ COPY . /app
 RUN pip3 install -e .
 
 ENV FLASK_APP=assignment_dashboard
-ENV GITHUB_API_TOKEN=
 ENV FLASK_DEBUG=1
-ARG PYTHONINSPECT
-ARG DATABASE_URL
-ARG SQLALCHEMY_ECHO
 
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
@@ -38,4 +34,3 @@ EXPOSE 5000
 
 ENTRYPOINT ["flask"]
 CMD ["run", "--host", "0.0.0.0"]
-# CMD ["updatedb"]

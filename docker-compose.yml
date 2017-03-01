@@ -8,6 +8,11 @@ services:
     container_name: assignment-dashboard
     environment:
       - GITHUB_API_TOKEN
+      - GITHUB_CLIENT_ID
+      - GITHUB_CLIENT_SECRET
+      - SECRET_KEY
+      - SQLALCHEMY_ECHO
+      - TZ
     ports:
       - 5000:5000
     volumes:
