@@ -1,6 +1,7 @@
 import os
 from datetime import date, datetime
 
+import arrow
 import nbformat
 import pandas as pd
 from flask import make_response, redirect, render_template, url_for
@@ -9,8 +10,11 @@ from nbconvert import HTMLExporter
 from . import app
 from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
+from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
                         get_combined_notebook, get_source_repos)
+
+TZ = os.environ.get('TZ', 'US/Eastern')
 
 
 # Routes
@@ -30,17 +34,8 @@ def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
 
-    commit_time = session.execute(
-        '''SELECT commit_date FROM `commit`
-         JOIN repo ON (repo_id)
-         WHERE repo.id == :source_id OR repo.source_id == :source_id
-         ORDER BY commit_date DESC LIMIT 1''',
-        {'source_id': 1}
-    ).first()
-    # SQLITE3 This string format may not work for other RDBMS engines.
-    # This could be set to inspect the format, or the query above
-    # could be re-written to use the ORM.
-    repo_update_time = datetime.strptime(commit_time[0], '%Y-%m-%d %H:%M:%S.%f') if commit_time else None
+    oldest_update_t = session.query(Repo.refreshed_at).order_by(Repo.refreshed_at.asc()).first()
+    repo_update_time = arrow.get(oldest_update_t[0]).to(TZ) if oldest_update_t else None
 
     return render_template(
         'assignment_repo.html',

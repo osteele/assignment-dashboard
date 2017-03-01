@@ -10,9 +10,8 @@ See the README for a discussion.
 
 import base64
 import os
-import sys
 from collections import namedtuple
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import arrow
 from github import Github
@@ -77,7 +76,7 @@ def own_commit(repo, commit):
 #
 
 def get_instructor_logins(source_repo):
-    print('fetching instructor logins')
+    print('Reading organization members from GitHub')
     organization_name = source_repo.full_name.split('/')[0]
     return {user.login
             for team in gh.get_organization(organization_name).get_teams()
@@ -88,7 +87,7 @@ def get_forks(source_repo, ignore_logins=None):
     if ignore_logins is None:
         ignore_logins = get_instructor_logins(source_repo)
 
-    print('fetching repos')
+    print('Reading repos from GitHub')
     repos = [repo for repo in source_repo.get_forks()
              if repo.owner.login not in ignore_logins]
 
@@ -102,7 +101,8 @@ user_instance_map = {}
 
 
 def save_users(users, role='student', verbose=True):
-    print('updating students')
+    if verbose:
+        print('Updating students in database')
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
     for user in users:
@@ -142,7 +142,7 @@ def get_repo_instance(repo):
 
 
 def save_repos(source_repo, repos):
-    print('updating %d repos' % len(repos))
+    print('Updating %d repos in database' % len(repos))
     source_repo_instance = find_or_create(session, Repo, owner_id=get_user_instance(source_repo.owner).id, name=source_repo.name)
     session.commit()
     assert source_repo_instance.id
@@ -157,21 +157,40 @@ def save_repos(source_repo, repos):
 # record file commits
 #
 
+def gh2db_repo(gh_repo):
+    owner_login, repo_name = gh_repo.full_name.split('/')
+    instance = (session.query(Repo)
+                .join(Repo.owner)
+                .filter(User.login == owner_login)
+                .filter(Repo.name == repo_name)).first()
+    assert instance
+    return instance
 
 def get_new_repo_commits(repo, commit_limit=None):
+    repo_instance = gh2db_repo(repo)
+
     saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
     saved_commit_shas = {commit.sha for commit in saved_commits}
 
     def get_commit_kwargs(repo):
+        since = None
         if REPROCESS_COMMITS:
-            return {}
-        date_tuple = (session.query(FileCommit.mod_time).
-                      filter(FileCommit.repo_id == Repo.id).
-                      filter(Repo.owner_id == User.id).
-                      filter(User.login == repo.owner.login).
-                      order_by(FileCommit.mod_time.desc()).
-                      first())
-        return {'since': date_tuple[0] + timedelta(weeks=-1)} if date_tuple else {}
+            pass
+        elif repo_instance.refreshed_at:
+            since = repo_instance.refreshed_at + timedelta(days=-1)
+        else:
+            date_tuple = (session.query(FileCommit.mod_time).
+                          filter(FileCommit.repo_id == Repo.id).
+                          filter(Repo.owner_id == User.id).
+                          filter(User.login == repo.owner.login).
+                          order_by(FileCommit.mod_time.desc())).first()
+            if date_tuple:
+                since = date_tuple[0] + timedelta(weeks=-1)
+
+        args = {}
+        if since:
+            args['since'] = since
+        return args
 
     repo_commits = [commit
                     for commit in repo.get_commits(**get_commit_kwargs(repo))
@@ -265,7 +284,10 @@ def update_file_commits(repo, file_commit_recs):
 # record repo commits
 #
 
-def record_repo_commits(repo, repo_commits):
+def record_repo_commits(repo, repo_commits, timestamp):
+    repo_instance = gh2db_repo(repo)
+    repo_instance.refreshed_at = timestamp
+
     commit_instances = [Commit(repo_id=get_repo_instance(repo).id,
                                sha=commit.sha,
                                commit_date=parse_git_datetime(commit.last_modified))
@@ -275,22 +297,21 @@ def record_repo_commits(repo, repo_commits):
 
 
 def update_repo_files(repo, all_commits=False, commit_limit=None):
+    timestamp = datetime.utcnow()
     repo_commits = get_new_repo_commits(repo, commit_limit=COMMIT_LIMIT)
-    if not repo_commits:
-        return
     file_commit_recs = get_file_commit_recs(repo, repo_commits, all_commits=all_commits)
-    if not file_commit_recs:
-        return
-    download_files(repo, repo_commits, file_commit_recs)
-    update_file_commits(repo, file_commit_recs)
-    record_repo_commits(repo, repo_commits)
+    if repo_commits:
+        download_files(repo, repo_commits, file_commit_recs)
+        update_file_commits(repo, file_commit_recs)
+    record_repo_commits(repo, repo_commits, timestamp)
 
 
 def add_repo(repo_name):
     owner_login, shortname = repo_name.split('/')
-    instance = (session.query(Repo).options(joinedload(Repo.owner))
-                .filter(User.login==owner_login)
-                .filter(Repo.name==shortname)).first()
+    instance = (session.query(Repo)
+                .join(Repo.owner)
+                .filter(User.login == owner_login)
+                .filter(Repo.name == shortname)).first()
     assert not instance.source_id
     update_db(repo_name)
 
@@ -308,7 +329,7 @@ def update_db(source_repo_name):
 
     repos = [source_repo] + forks
     if REPO_LIMIT:
-        repos = source_repo[:REPO_LIMIT]
+        repos = repos[:REPO_LIMIT]
 
     for i, repo in enumerate(repos):
         print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
