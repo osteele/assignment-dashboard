@@ -1,17 +1,18 @@
 # Flask
 Flask>=0.12
 Flask-Migrate>=2.0.3
+GitHub-Flask>=3.1.5
 Jinja2>=2.8
-
-# Services
-PyGithub>=1.29
--e git+https://github.com/olin-computing/nbcollate.git@0.1.1#egg=nbcollate-0.1.1
-
-# Data Processing
-arrow>=0.10.0
-pandas>=0.19.2
-jupyter-client>=4.4.0
 
 # SQL
 sqlalchemy>=1.1.5
 Flask-SQLAlchemy>=2.1
+
+# Services
+PyGithub>=1.29
+
+# Misc.
+arrow>=0.10.0
+pandas>=0.19.2
+jupyter-client>=4.4.0
+-e git+https://github.com/olin-computing/nbcollate.git@0.1.1#egg=nbcollate-0.1.1
