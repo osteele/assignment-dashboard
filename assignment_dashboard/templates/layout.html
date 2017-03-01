@@ -15,9 +15,18 @@
   </head>
 
   <body>
-    {% block breadcrumbs %}{% endblock %}
+    <nav class="navbar navbar-fixed-top">
+      <ol class="breadcrumb">
+        {% block breadcrumbs %}{% endblock %}
+      </ol>
 
-    {% block content %}{% endblock %}
+    </nav>
+
+    {% block header %}{% endblock %}
+
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
   </body>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>

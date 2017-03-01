@@ -2,48 +2,53 @@
 {% block title %}{{ assignment_repo.owner.login }}/{{ assignment_repo.name }}{% endblock %}
 
 {% block breadcrumbs %}
-  <nav class="navbar navbar-fixed-top">
-    <ol class="breadcrumb">
-      <li>{{ classroom_owner.login }}</li>
-      <li>{{ assignment_repo.name }}</li>
-    </ol>
-  </nav>
+  <li>{{ classroom_owner.login }}</li>
+  <li class="active">{{ assignment_repo.name }}</li>
 {% endblock %}
 
-{% block content %}
-  <div class="container">
-    <div class="jumbotron">
-      <div class="container">
-        <h1><small>{{ classroom_owner.fullname or classroom_owner.login | capitalize }} {{ assignment_repo.name}}</small></h1>
-        <p><small>{% if repo_update_time %}The last commit is from {{ repo_update_time.strftime('%l:%M%P, %B %d') }}.{% endif %}</small></p>
-        <p><small>Execute the <tt>flask updatedb</tt> command to update the database.</small></p>
-        <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
-      </div>
+{% block header %}
+  <div class="jumbotron">
+    <div class="container">
+      <h3>
+        {{ assignment_repo.name }}
+        <small>({{ classroom_owner.fullname or classroom_owner.login | capitalize }})</small>
+      </h3>
     </div>
   </div>
 
   <div class="container">
-    <table class="table table-condensed table-striped">
+    <div class="alert alert-info alert-dismissible" role="alert">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <p>{% if repo_update_time %}Updated {{ repo_update_time.strftime('%l:%M%P, %B %d') }}.{% else %}Never updated.{% endif %}</p>
+      <p>Execute the <tt>flask updatedb</tt> command to update the database.</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div>
+    <a class="btn btn-default" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV</a>
+  </div>
+  <table class="table table-condensed table-striped">
+    <tr>
+      <th></th>
+      {% for assignment in assignments %}
+        <th><a href="{{ url_for('assignment', assignment_id=assignment.id) }}" title="View the combined notebook">{{ assignment.name or assignment.path }}</a></th>
+      {% endfor %}
+    </tr>
+
+    {% for student in students %}
       <tr>
-        <th></th>
+        <th><a href="{{ student.repo.html_url }}" title="View the student repo on GitHub">{{ student.display_name }}</a></th>
         {% for assignment in assignments %}
-          <th><a href="{{ url_for('assignment', assignment_id=assignment.id) }}" title="View the combined notebook">{{ assignment.name or assignment.path }}</a></th>
+          {% set response = responses[assignment.id][student.user.id] %}
+          <td class="{{ response.css_class }}">
+            <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="{{ response.hover }}">
+              {{ response.text }}
+            </a>
+          </td>
         {% endfor %}
       </tr>
-
-      {% for student in students %}
-        <tr>
-          <th><a href="{{ student.repo.html_url }}" title="View the student repo on GitHub">{{ student.display_name }}</a></th>
-          {% for assignment in assignments %}
-            {% set response = responses[assignment.id][student.user.id] %}
-            <td class="{{ response.css_class }}">
-              <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="{{ response.hover }}">
-                {{ response.text }}
-              </a>
-            </td>
-          {% endfor %}
-        </tr>
-      {% endfor %}
-    </table>
-  </div>
+    {% endfor %}
+  </table>
 {% endblock %}

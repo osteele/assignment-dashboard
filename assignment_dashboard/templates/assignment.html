@@ -10,11 +10,9 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-  <ol class="breadcrumb">
     <li>{{ classroom_owner.login }}</li>
     <li><a href="/">{{ assignment.repo.name }}</a></li>
-    <li>{{ assignment.name }}</li>
-  </ol>
+    <li class="active">{{ assignment.name }}</li>
 {% endblock %}
 
 {% block content %}
