@@ -1,5 +1,6 @@
 # Flask
 Flask>=0.12
+Flask-Migrate>=2.0.3
 Jinja2>=2.8
 
 # Services
