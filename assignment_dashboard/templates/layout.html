@@ -20,6 +20,7 @@
         {% block breadcrumbs %}{% endblock %}
       </ol>
 
+      {% if config.REQUIRE_LOGIN %}
       <div class="pull-right">
         {% if g.user %}
           {% if g.user.avatar_url %}
@@ -32,6 +33,7 @@
           <a class="btn btn-default btn-sm" title="Sign In" href="{{ url_for('login') }}"><i class="fa fa-sign-in" aria-hidden="true"></i></a>
         {% endif %}
       </div>
+      {% endif %}
     </nav>
 
     {% block header %}{% endblock %}
