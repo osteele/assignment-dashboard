@@ -9,7 +9,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .database import session
-from .decorators import assignment_access_required, login_required, repo_access_required
+from .decorators import login_required, requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
@@ -29,8 +29,13 @@ def index():
         return render_template('index.html', repos=repos)
 
 
+@app.errorhandler(401)
+def unauthorized_error(error):
+    return render_template('401.html'), 401
+
+
 @app.route('/assignment_repo/<int:repo_id>')
-@repo_access_required
+@requires_access('repo')
 def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
@@ -49,7 +54,7 @@ def assignment_repo(repo_id):
 
 
 @app.route('/assignment_repo/<int:repo_id>/report.csv')
-@repo_access_required
+@requires_access('repo')
 def assignment_repo_csv(repo_id):
     model = get_assignment_responses(repo_id)
     df = pd.DataFrame({(assgn.name or assgn.path):
@@ -73,14 +78,14 @@ def empty():
 
 
 @app.route('/assignment/<int:assignment_id>')
-@assignment_access_required
+@requires_access('assignment')
 def assignment(assignment_id):
     assignment = find_assignment(assignment_id)
     return render_template('assignment.html', assignment=assignment, classroom_owner=assignment.repo.owner)
 
 
 @app.route('/assignment/<int:assignment_id>.ipynb.html')
-@assignment_access_required
+@requires_access('assignment')
 def assignment_notebook(assignment_id):
     assignment = find_assignment(assignment_id)
     content = assignment.content
@@ -91,21 +96,21 @@ def assignment_notebook(assignment_id):
 
 
 @app.route('/assignment/<int:assignment_id>/collated.ipynb.html')
-@assignment_access_required
+@requires_access('assignment')
 def collated_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     return HTMLExporter().from_notebook_node(model.collated_nb)
 
 
 @app.route('/assignment/<int:assignment_id>/named.ipynb.html')
-@assignment_access_required
+@requires_access('assignment')
 def collated_assignment_with_names(assignment_id):
     nb = get_collated_notebook_with_names(assignment_id)
     return HTMLExporter().from_notebook_node(nb)
 
 
 @app.route('/assignment/<int:assignment_id>/collated.ipynb')
-@assignment_access_required
+@requires_access('assignment')
 def download_collated_assignment(assignment_id):
     model = get_combined_notebook(assignment_id)
     collated_nb_name = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
@@ -117,7 +122,7 @@ def download_collated_assignment(assignment_id):
 
 
 @app.route('/assignment/<int:assignment_id>/answer_status.html')
-@assignment_access_required
+@requires_access('assignment')
 def assignment_answer_status(assignment_id):
     status = get_combined_notebook(assignment_id).answer_status
     return render_template(
