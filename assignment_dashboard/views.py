@@ -15,8 +15,6 @@ from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
                         get_combined_notebook, get_source_repos)
 
-TZ = os.environ.get('TZ', 'US/Eastern')
-
 
 # Routes
 #
@@ -38,7 +36,7 @@ def assignment_repo(repo_id):
     assignment_repo = model.assignment_repo
 
     oldest_update_t = session.query(Repo.refreshed_at).order_by(Repo.refreshed_at.asc()).first()
-    repo_update_time = arrow.get(oldest_update_t[0]).to(TZ) if oldest_update_t else None
+    repo_update_time = arrow.get(oldest_update_t[0]).to(app.config['TZ']) if oldest_update_t else None
 
     return render_template(
         'assignment_repo.html',

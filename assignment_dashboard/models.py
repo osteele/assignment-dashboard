@@ -57,10 +57,11 @@ class FileContent(Base):
     content_type = Column(String(40), nullable=True)
     content = deferred(Column(Text, nullable=True))
 
-organization_users_table = Table('organization_users', Base.metadata,
-    Column('organization_id', ForeignKey('user.id'), primary_key=True),
+organization_users_table = Table(
+    'organization_users', Base.metadata, Column('organization_id', ForeignKey('user.id'), primary_key=True),
     Column('user_id', ForeignKey('user.id'), primary_key=True),
 )
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -76,8 +77,8 @@ class User(Base):
     repos = relationship('Repo', backref='owner')
 
     members = relationship('User', secondary=organization_users_table,
-                           primaryjoin=id==organization_users_table.c.user_id,
-                           secondaryjoin=id==organization_users_table.c.organization_id,
+                           primaryjoin=id == organization_users_table.c.user_id,
+                           secondaryjoin=id == organization_users_table.c.organization_id,
                            back_populates='organizations')
     organizations = relationship('User', secondary=organization_users_table,
                                  primaryjoin=id == organization_users_table.c.organization_id,

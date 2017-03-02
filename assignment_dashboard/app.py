@@ -6,6 +6,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change me in production')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['TZ'] = os.environ.get('TZ', 'US/Eastern')
 
 if 'GITHUB_CLIENT_ID' in os.environ:
     app.config['REQUIRE_LOGIN'] = True
