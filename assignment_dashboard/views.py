@@ -9,7 +9,7 @@ from nbconvert import HTMLExporter
 
 from . import app
 from .database import session
-from .decorators import login_required, requires_access
+from .decorators import requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
@@ -20,8 +20,10 @@ from .viewmodel import (find_assignment, get_assignment_responses, get_collated_
 #
 
 @app.route('/')
-@login_required
 def index():
+    if app.config.get('REQUIRE_LOGIN') and not g.user:
+        return render_template('splash.html')
+
     repos = get_source_repos(g.user)
     if len(repos) == 1:
         return redirect(url_for('assignment_repo', repo_id=repos[0].id))
