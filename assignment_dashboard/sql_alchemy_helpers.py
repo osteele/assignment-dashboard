@@ -12,12 +12,13 @@ def find_or_create(session, model, **kwargs):
 
     Note: This method is not ACID.
     """
+    q = session.query(model).filter_by(**kwargs)
     try:
-        return session.query(model).filter_by(**kwargs).one()
+        return q.one()
     except NoResultFound:
         instance = model(**kwargs)
         session.add(instance)
-        return instance
+        return q.one()
 
 
 def update_instance(instance, attrs):

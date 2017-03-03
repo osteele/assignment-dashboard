@@ -53,8 +53,9 @@ def compute_assignment_name(path):
 
 
 def update_assignment_file_list(assignment_repo, assignment_paths):
-    saved_assignments = {assignment.path for assignment in assignment_repo.assignments}
-    if assignment_paths == saved_assignments:
+    saved_assignments = {assignment.path: assignment
+                         for assignment in assignment_repo.assignments}
+    if set(assignment_paths) == set(saved_assignments):
         return
 
     map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
@@ -70,8 +71,8 @@ def get_assignment_responses(repo_id):
                        .options(joinedload(Repo.assignments).
                                 joinedload(Assignment.repo))
                        .options(joinedload(Repo.files))
-                       .filter(Repo.id == repo_id)).first()
-    assert assignment_repo
+                       .filter(Repo.id == repo_id)
+                       .one())
 
     assignment_paths = {f.path for f in assignment_repo.files if f.path.endswith('.ipynb')}
     update_assignment_file_list(assignment_repo, assignment_paths)
@@ -128,10 +129,11 @@ def get_assignment_responses(repo_id):
 
 
 def find_assignment(assignment_id):
-    """Return an Assignment. The associated repo and repo owner are eagerly loaded."""
-    assignment = session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).first()
-    assert assignment, "no assignment id=%s" % assignment_id
-    return assignment
+    """Return an Assignment.
+
+    The associated repo and repo owner are eagerly loaded.
+    """
+    return session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).one()
 
 
 def get_assignment(assignment_id):
@@ -144,8 +146,7 @@ def get_assignment(assignment_id):
                           joinedload(AssignmentQuestion.responses)).
                   options(joinedload(Assignment.repo).joinedload(Repo.owner)).
                   filter(Assignment.id == assignment_id).
-                  first())
-    assert assignment, "no assignment id=%s" % assignment_id
+                  one())
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
     files_hash = hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
