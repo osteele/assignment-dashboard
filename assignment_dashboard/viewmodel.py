@@ -9,7 +9,7 @@ from collections import OrderedDict, namedtuple
 
 import arrow
 import nbformat
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, undefer
 
 from nbcollate import NotebookCollator
 
@@ -140,7 +140,8 @@ def get_assignment(assignment_id):
     Returns the assignment.
     """
     assignment = (session.query(Assignment).
-                  options(joinedload(Assignment.questions)).
+                  options(joinedload(Assignment.questions).
+                          joinedload(AssignmentQuestion.responses)).
                   options(joinedload(Assignment.repo).joinedload(Repo.owner)).
                   filter(Assignment.id == assignment_id).
                   first())
@@ -152,11 +153,11 @@ def get_assignment(assignment_id):
     if assignment and assignment.md5 == files_hash:
         return assignment
 
-    # .options(undefer(FileCommit.file_content.content)) \
     file_commits = [fc
                     for fc in (session.query(FileCommit)
-                               .options(joinedload(FileCommit.repo))
+                               .options(joinedload(FileCommit.repo).joinedload(Repo.owner))
                                .options(joinedload(FileCommit.file_content))
+                               .options(undefer('file_content.content'))
                                .filter(FileCommit.path == assignment.path))
                     if fc.repo]
 
@@ -197,7 +198,8 @@ def get_assignment(assignment_id):
 
 def get_combined_notebook(assignment_id):
     assignment = get_assignment(assignment_id)
-    answer_status = [(question.question_name, {(response.user.fullname or response.user.login): response.status for response in question.responses})
+    answer_status = [(question.question_name, {(response.user.fullname or response.user.login): response.status
+                                               for response in question.responses})
                      for question in sorted(assignment.questions, key=lambda q: q.position)]
     return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
 

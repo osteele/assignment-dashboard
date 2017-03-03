@@ -187,4 +187,4 @@ class AssignmentQuestionResponse(Base):
     notebook_data = deferred(Column(Text, nullable=True))
 
     question = relationship('AssignmentQuestion', backref=backref('responses', cascade='all, delete-orphan'))
-    user = relationship('User')
+    user = relationship('User', lazy='joined')
