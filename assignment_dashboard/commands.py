@@ -26,6 +26,7 @@ def initdb():
     db.drop_all()
     db.create_all()
 
+
 @app.cli.command()
 @click.argument('repo_name')
 def add_repo(repo_name):
@@ -36,11 +37,12 @@ def add_repo(repo_name):
 
 
 @app.cli.command()
-@click.option('--repo-limit', help="Limit the number of repos.")
-@click.option('--commit-limit', help="Limit the number of commits.")
+@click.option('--repo-limit', type=click.INT, help="Limit the number of repos.")
+@click.option('--commit-limit', type=click.INT, help="Limit the number of commits.")
 @click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
 @click.option('--users', help="Restrict to logins in this comma-separated list")
-def updatedb(**kwargs):
+def updatedb(**options):
+    # return
     """Update the database from GitHub."""
     assert_github_token()
     repos = session.query(Repo).filter(Repo.source_id.is_(None)).all()
@@ -49,16 +51,18 @@ def updatedb(**kwargs):
         print("Run add_repo to add an assignment repository.")
         sys.exit(1)
 
-    # TODO modify update_database() to take kwargs. currently the module reads environs
-    for k, v in kwargs.items():
-        k = {'users': 'user_filter'}.get(k, k)
+    # TODO modify update_database() to take options. currently the module reads environs
+    for k, v in options.items():
         if v is not None:
             os.environ[k.upper()] = str(v)
+
     # do the import after the environs have been set
     from .update_database import update_db  # noqa: F401
+    if options['users']:
+        options['users'] = list(filter(None, options['users'].split(',')))
     for repo in repos:
         print("Updating %s" % repo.full_name)
-        update_db(repo.full_name)
+        update_db(repo.full_name, options)
 
 
 @app.cli.command()

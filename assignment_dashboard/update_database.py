@@ -15,9 +15,6 @@ from datetime import datetime, timedelta
 
 import arrow
 from github import Github
-# main
-#
-from sqlalchemy.orm import joinedload
 
 from .database import session
 from .models import Commit, FileCommit, FileContent, Repo, User
@@ -26,15 +23,11 @@ from .sql_alchemy_helpers import find_or_create, update_instance, upsert_all
 # globals
 #
 
-REPO_LIMIT = int(os.environ.get('REPO_LIMIT', 0))
 COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
-USER_FILTER = list(filter(None, os.environ.get('USER_FILTER', '').split(',')))
-
 REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False', '0')
 
-# TODO use user token
+# TODO use user token associated with assignment repo
 GITHUB_API_TOKEN = os.environ['GITHUB_API_TOKEN']
-
 gh = Github(GITHUB_API_TOKEN)
 
 
@@ -77,7 +70,7 @@ def own_commit(repo, commit):
 def get_instructor_logins(source_repo):
     print('Reading organization members from GitHub')
     org_name = source_repo.full_name.split('/')[0]
-    org_instance = session.query(User).filter(User.login==org_name).first()
+    org_instance = session.query(User).filter(User.login == org_name).one()
     members = [u for u in gh.get_organization(org_name).get_members()]
     save_users(members, role='instructor')
 
@@ -169,9 +162,10 @@ def gh2db_repo(gh_repo):
     instance = (session.query(Repo)
                 .join(Repo.owner)
                 .filter(User.login == owner_login)
-                .filter(Repo.name == repo_name)).first()
-    assert instance
+                .filter(Repo.name == repo_name)
+                .one())
     return instance
+
 
 def get_new_repo_commits(repo, commit_limit=None):
     repo_instance = gh2db_repo(repo)
@@ -186,11 +180,12 @@ def get_new_repo_commits(repo, commit_limit=None):
         elif repo_instance.refreshed_at:
             since = repo_instance.refreshed_at + timedelta(days=-1)
         else:
-            date_tuple = (session.query(FileCommit.mod_time).
-                          filter(FileCommit.repo_id == Repo.id).
-                          filter(Repo.owner_id == User.id).
-                          filter(User.login == repo.owner.login).
-                          order_by(FileCommit.mod_time.desc())).first()
+            date_tuple = (session.query(FileCommit.mod_time)
+                          .filter(FileCommit.repo_id == Repo.id)
+                          .filter(Repo.owner_id == User.id)
+                          .filter(User.login == repo.owner.login)
+                          .order_by(FileCommit.mod_time.desc())
+                          .first())
             if date_tuple:
                 since = date_tuple[0] + timedelta(weeks=-1)
 
@@ -206,41 +201,43 @@ def get_new_repo_commits(repo, commit_limit=None):
     if commit_limit:
         repo_commits = repo_commits[:commit_limit]
 
-    messages = []
     if repo_commits:
-        messages.append("processing %d new commits" % len(repo_commits))
-    if saved_commits:
-        messages.append("ignoring %d previous commits" % len(saved_commits))
-    if messages:
-        print("; ".join(messages))
+        print("Processing %d new commits" % len(repo_commits))
 
     return repo_commits
 
 
 def get_file_commit_recs(repo, repo_commits, all_commits=False):
-    file_commit_recs = unique_by(
-        (RepoCommitFile(commit, item), (repo.full_name, item.filename))
+    # file_commit_recs = unique_by(
+    #     (RepoCommitFile(commit, item), (repo.full_name, item.filename))
+    #     for commit in reversed(repo_commits)
+    #     if all_commits or own_commit(repo, commit)
+    #     for item in commit.files
+    #     if item.sha)
+    #
+    file_commit_recs = [
+        RepoCommitFile(commit, item)
         for commit in reversed(repo_commits)
         if all_commits or own_commit(repo, commit)
         for item in commit.files
-        if item.sha)
+        if item.sha]
 
-    print('processing %d file commits' % len(file_commit_recs))
+    print('Processing %d file commits' % len(file_commit_recs))
 
     return file_commit_recs
 
 
 def download_files(repo, repo_commits, file_commit_recs):
+    print('repo_commits', repo_commits)
+    print('file_commit_recs', file_commit_recs)
     incoming_file_shas = {item.file.sha for item in file_commit_recs}
     if not incoming_file_shas:
         return
 
     db_file_content_shas = {sha for sha, in session.query(FileContent.sha).filter(FileContent.sha.in_(incoming_file_shas))}
-    missing_shas = incoming_file_shas - db_file_content_shas
-    if not missing_shas:
-        return
-
-    print('downloading %d files' % len(missing_shas))
+    print('incoming_file_shas', incoming_file_shas)
+    print('db_file_content_shas', db_file_content_shas)
+    print('diff', incoming_file_shas - db_file_content_shas)
 
     download_commits = ((commit, {item.file.filename
                                   for item in file_commit_recs if item.commit == commit
@@ -251,20 +248,29 @@ def download_files(repo, repo_commits, file_commit_recs):
                         for (commit, paths) in download_commits
                         if paths)
 
+    if not download_commits:
+        return
+
+    print("Downloading %d file(s)" % len(incoming_file_shas - db_file_content_shas))
+
     seen = set()
     for commit, paths in download_commits:
+        print(commit, paths)
         items = [item
-                 for item in repo.get_git_tree(repo.get_commits()[0].sha, recursive=True).tree
+                 for item in repo.get_git_tree(commit.sha, recursive=True).tree
                  if item.path in paths]
+        print(items)
         for item in items:
             if item.sha in seen:
+                print('ignore')
                 continue
-            print('downloading %s/%s (sha=%s)' % (repo.full_name, item.path, item.sha))
+            seen |= {item.sha}
+
+            print("Downloading %s/%s (sha=%s)" % (repo.full_name, item.path, item.sha))
             content = get_file_content(repo, item.url) if is_downloadable_path(item.path) else None
             fc = FileContent(sha=item.sha, content=content)
             session.add(fc)
             session.commit()
-            seen |= {item.sha}
 
 
 def update_file_commits(repo, file_commit_recs):
@@ -304,28 +310,27 @@ def update_repo_files(repo, all_commits=False, commit_limit=None):
 
 def add_repo(repo_name):
     owner_login, shortname = repo_name.split('/')
-    instance = (session.query(Repo)
-                .join(Repo.owner)
-                .filter(User.login == owner_login)
-                .filter(Repo.name == shortname)).first()
-    assert not instance.source_id
+    owner = find_or_create(session, User, login=owner_login)
+    instance = find_or_create(session, Repo, owner_id=owner.id, name=shortname)
+    # FIXME this doesn't detect forks that weren't previously imported
+    assert not instance.source_id, "appears to be a fork: %r" % instance
     update_db(repo_name)
 
 
-def update_db(source_repo_name):
+def update_db(source_repo_name, options={}):
     source_repo = gh.get_repo(source_repo_name)
     repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     forks = get_forks(source_repo)
-    if USER_FILTER:
-        repos = [repo for repo in repos if repo.owner.login in USER_FILTER]
 
     save_users([source_repo.owner], role='organization')
     save_users([repo.owner for repo in forks], role='student')
     save_repos(source_repo, forks)
 
     repos = [source_repo] + forks
-    if REPO_LIMIT:
-        repos = repos[:REPO_LIMIT]
+    if options.get('users'):
+        repos = [repo for repo in repos if repo.owner.login in options['users']]
+    if options.get('repo_limit'):
+        repos = repos[:options['repo_limit']]
 
     for i, repo in enumerate(repos):
         print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
