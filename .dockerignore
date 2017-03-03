@@ -1,4 +1,8 @@
+*.egg
+.env
 .git
+data
 Dockerfile*
 docker-compose.yml
 src
+TODO.*
