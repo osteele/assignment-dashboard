@@ -1,0 +1,23 @@
+version: "2.1"
+
+services:
+  flask:
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+       - .:/app
+
+  postgres:
+    image: postgres:9.6.1
+    healthcheck:
+      test: "psql -U postgres -c '\\l';"
+    volumes:
+      - data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+volumes:
+  data:

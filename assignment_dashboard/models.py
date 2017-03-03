@@ -70,10 +70,11 @@ class User(Base):
     login = Column(String(100), nullable=False, index=True, unique=True)
     fullname = Column(String(100))
     avatar_url = Column(String(1024))
-    gh_type = Column(Enum('Organization', 'User'))
+    gh_type = Column(Enum('Organization', 'User', name='user_types'))
 
-    role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
-    status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
+    role = Column(Enum('student', 'instructor', 'organization', name='user_roles'),
+                  nullable=False, server_default='student')
+    status = Column(Enum('enrolled', 'waitlisted', 'dropped', name='user_statuses'))
     repos = relationship('Repo')
 
     members = relationship('User', secondary=organization_users_table,
