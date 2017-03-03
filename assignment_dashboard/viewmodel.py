@@ -59,7 +59,7 @@ def update_assignment_file_list(assignment_repo, assignment_paths):
         return
 
     map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
-    assignment_repo.assignments = [(saved_assignments.get(path, None) or
+    assignment_repo.assignments = [(saved_assignments.get(path) or
                                     Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path)))
                                    for path in assignment_paths]
     session.commit()
@@ -116,7 +116,7 @@ def get_assignment_responses(repo_id):
 
     assignments = assignment_repo.assignments
     student_repos = session.query(Repo).filter(Repo.source_id.in_(a.repo_id for a in assignments)).options(joinedload(Repo.owner)).all()
-    responses = {assignment.id: {fork.owner_id: file_presentation(user_path_files.get((fork.owner_id, assignment.path), None), assignment.path)
+    responses = {assignment.id: {fork.owner_id: file_presentation(user_path_files.get((fork.owner_id, assignment.path)), assignment.path)
                                  for fork in student_repos}
                  for assignment in assignments}
 

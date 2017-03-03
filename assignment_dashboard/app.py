@@ -7,6 +7,6 @@ from .config import BaseConfig
 app = Flask(__name__)
 app.config.from_object(BaseConfig)
 
-if os.environ.get('FLASK_DEBUG', None):
+if os.environ.get('FLASK_DEBUG'):
     from flask_debugtoolbar import DebugToolbarExtension
     toolbar = DebugToolbarExtension(app)

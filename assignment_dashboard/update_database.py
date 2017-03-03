@@ -32,8 +32,8 @@ USER_FILTER = list(filter(None, os.environ.get('USER_FILTER', '').split(',')))
 
 REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False', '0')
 
-GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN', None)
-assert GITHUB_API_TOKEN
+# TODO use user token
+GITHUB_API_TOKEN = os.environ['GITHUB_API_TOKEN']
 
 gh = Github(GITHUB_API_TOKEN)
 
@@ -118,7 +118,7 @@ def save_users(users, role='student'):
                      role=role,
                      **dict(fullname=user.name) if user.name else {})
 
-        instance = saved_instances.get(user.login, None)
+        instance = saved_instances.get(user.login)
         if instance:
             update_instance(instance, attrs)
         else:

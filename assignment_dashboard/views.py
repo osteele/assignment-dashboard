@@ -59,7 +59,7 @@ def assignment_repo_csv(repo_id):
     model = get_assignment_responses(repo_id)
     df = pd.DataFrame({(assgn.name or assgn.path):
                        {student.display_name:
-                        model.responses[assgn.id][student.user.id].get('status', None)
+                        model.responses[assgn.id][student.user.id].get('status')
                         for student in model.students}
                        for assgn in model.assignments},
                       columns=[a.name or a.path for a in model.assignments])

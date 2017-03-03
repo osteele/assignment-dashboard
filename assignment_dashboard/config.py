@@ -8,7 +8,7 @@ class BaseConfig(object):
 
     db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/database.db'))
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///' + db_path)
-    SQLALCHEMY_ECHO = True if os.environ.get('SQLALCHEMY_ECHO', None) else False
+    SQLALCHEMY_ECHO = True if os.environ.get('SQLALCHEMY_ECHO') else False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     TZ = os.environ.get('TZ', 'US/Eastern')
