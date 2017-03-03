@@ -213,6 +213,7 @@ def get_collated_notebook_with_names(assignment_id):
                     for fc in (session.query(FileCommit)
                                .options(joinedload(FileCommit.repo))
                                .options(joinedload(FileCommit.file_content))
+                               .options(undefer('file_content.content'))
                                .filter(FileCommit.path == assignment.path))
                     if fc.repo]
 
