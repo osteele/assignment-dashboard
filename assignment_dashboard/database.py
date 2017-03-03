@@ -9,7 +9,7 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/datab
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///' + DB_PATH)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_ECHO'] = os.environ.get('SQLALCHEMY_ECHO', None)
+app.config['SQLALCHEMY_ECHO'] = True if os.environ.get('SQLALCHEMY_ECHO', None) else False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
