@@ -52,50 +52,71 @@ def compute_assignment_name(path):
     return re.sub(NOTEBOOK_ASSIGNMENT_PATH_RE, NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE, path)
 
 
+def update_assignment_file_list(assignment_repo, assignment_paths):
+    saved_assignments = {assignment.path for assignment in assignment_repo.assignments}
+    if assignment_paths == saved_assignments:
+        return
+
+    map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
+    assignment_repo.assignments = [(saved_assignments.get(path, None) or
+                                    Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path)))
+                                   for path in assignment_paths]
+    session.commit()
+
+
 def get_assignment_responses(repo_id):
-    """Update the repo.assignments from its list of files. Returns a pair (assignment_repo, response_status)."""
-    assignment_repo = (session.query(Repo).
-                       options(joinedload(Repo.assignments)).
-                       options(joinedload(Repo.files)).
-                       filter(Repo.id == repo_id).first())
+    """Update the repo.assignments from its list of files."""
+    assignment_repo = (session.query(Repo)
+                       .options(joinedload(Repo.assignments).
+                                joinedload(Assignment.repo))
+                       .options(joinedload(Repo.files))
+                       .filter(Repo.id == repo_id)).first()
     assert assignment_repo
 
-    # refresh the list of assignments
     assignment_paths = {f.path for f in assignment_repo.files if f.path.endswith('.ipynb')}
-    saved_assignments = {assignment.path: assignment for assignment in assignment_repo.assignments}
-    if assignment_paths != set(saved_assignments):
-        map(session.delete, (assignment for assignment in assignment_repo.assignments if assignment.path not in assignment_paths))
-        assignment_repo.assignments = [(saved_assignments.get(path, None) or
-                                        Assignment(repo_id=assignment_repo.id, path=path, name=compute_assignment_name(path)))
-                                       for path in assignment_paths]
-        session.commit()
+    update_assignment_file_list(assignment_repo, assignment_paths)
 
     # instead of assignment_repo.files, to avoid 1 + N
     # TODO filter to forks of source
-    file_commits = session.query(FileCommit).filter(FileCommit.path.in_(assignment_paths)).all()
-    user_path_files = {(fc.repo.owner_id, fc.path): fc for fc in file_commits if fc.repo}
+    file_commits = (session.query(FileCommit)
+                    .options(joinedload(FileCommit.repo))
+                    .filter(FileCommit.path.in_(assignment_paths))).all()
     update_content_types([fc.file_content for fc in file_commits if fc.file_content])
     session.commit()
 
-    def file_presentation(file, path):
-        if not file:
+    def file_presentation(fc, path):
+        if not fc:
             return dict(path=path, css_class='danger', status='missing', text='missing', hover='Missing')
 
-        d = dict(path=path, status='done', text=arrow.get(file.mod_time).humanize(), hover=file.mod_time)
-        if file.sha == user_path_files[assignment_repo.owner.id, file.path].sha:
+        d = dict(path=path, status='done', text=arrow.get(fc.mod_time).humanize(), hover=fc.mod_time)
+        if fc.sha in assignment_file_shas:
             d.update(dict(css_class='danger', status='unchanged', text='unchanged', hover='Unchanged from original'))
-        elif not file.file_content:
+        elif not fc.file_content:
             d.update(dict(css_class='danger', status='empty', text='empty'))
-        elif file.file_content.content_type != PYNB_MIME_TYPE:
+        elif fc.file_content.content_type != PYNB_MIME_TYPE:
             d.update(dict(css_class='warning', status='invalid', text='invalid',
                           hover='Invalid Jupyter notebook (merge conflict?)'))
         return d
 
+    # re-query, since commit invalidates the cache
+    # TODO DRY w/ code above
+    assignment_repo = (session.query(Repo)
+                       .options(joinedload(Repo.assignments).
+                                joinedload(Assignment.repo))
+                       .options(joinedload(Repo.files))
+                       .filter(Repo.id == repo_id)).first()
+    assignment_paths = {fc.path for fc in assignment_repo.files}
+    file_commits = (session.query(FileCommit)
+                    .options(joinedload(FileCommit.repo))
+                    .filter(FileCommit.path.in_(assignment_paths))).all()
+    assignment_file_shas = {fc.sha for fc in assignment_repo.files}
+    user_path_files = {(fc.repo.owner_id, fc.path): fc
+                       for fc in file_commits if fc.repo}
+
     assignments = assignment_repo.assignments
-    student_repos = assignment_repo.forks
-    responses = {assignment.id:
-                 {fork.owner.id: file_presentation(user_path_files.get((fork.owner.id, assignment.path), None), assignment.path)
-                  for fork in student_repos}
+    student_repos = session.query(Repo).filter(Repo.source_id.in_(a.repo_id for a in assignments)).options(joinedload(Repo.owner)).all()
+    responses = {assignment.id: {fork.owner_id: file_presentation(user_path_files.get((fork.owner_id, assignment.path), None), assignment.path)
+                                 for fork in student_repos}
                  for assignment in assignments}
 
     return AssignmentResponseViewModel(

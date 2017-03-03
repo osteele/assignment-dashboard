@@ -41,7 +41,7 @@ class FileCommit(Base):
     mod_time = Column(DateTime, nullable=False)  # de-normalized from the related commit
     sha = Column(String(40), ForeignKey('file_content.sha'), SHA_HASH_CONSTRAINT, nullable=False)
 
-    file_content = relationship('FileContent', backref='files')
+    file_content = relationship('FileContent', backref='files', lazy='joined')
     repo = relationship('Repo', backref='files')
 
     @property
@@ -74,12 +74,13 @@ class User(Base):
 
     role = Column(Enum('student', 'instructor', 'organization'), nullable=False, server_default='student')
     status = Column(Enum('enrolled', 'waitlisted', 'dropped'))
-    repos = relationship('Repo', backref='owner')
+    repos = relationship('Repo')
 
     members = relationship('User', secondary=organization_users_table,
                            primaryjoin=id == organization_users_table.c.user_id,
                            secondaryjoin=id == organization_users_table.c.organization_id,
                            back_populates='organizations')
+
     organizations = relationship('User', secondary=organization_users_table,
                                  primaryjoin=id == organization_users_table.c.organization_id,
                                  secondaryjoin=id == organization_users_table.c.user_id,
@@ -99,6 +100,7 @@ class Repo(Base):
     source = relationship('Repo', remote_side=[id])
     forks = relationship('Repo')
     commits = relationship('Commit', backref='repo')
+    owner = relationship('User', lazy='joined')
 
     @property
     def full_name(self):
