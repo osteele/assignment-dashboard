@@ -24,13 +24,14 @@ StudentViewModel = namedtuple('StudentViewModel', 'user repo display_name')
 AssignmentResponseViewModel = namedtuple('AssignmentResponseViewModel', 'assignment_repo assignments students responses')
 
 
-def get_source_repos(user):
-    # PERF replace this by a single query; probably not using the ORM
+def get_source_repos(user=None):
+    if not user:
+        return session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(None)).all()
+    # PERF replace this by a single query
     return [r
             for org in user.organizations
             for r in org.repos
             if r.is_source]
-    return session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(None)).all()
 
 
 def update_content_types(file_contents):
