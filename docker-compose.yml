@@ -6,5 +6,3 @@ services:
       context: .
     image: assignment-dashboard
     container_name: assignment-dashboard
-    ports:
-      - 5000:5000
