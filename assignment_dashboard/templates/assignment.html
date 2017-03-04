@@ -16,44 +16,42 @@
 {% endblock %}
 
 {% block content %}
-      <div class="container">
-        <!-- Nav tabs -->
-        <ul class="nav nav-tabs" role="tablist">
-          <li role="presentation"><a href="#assignment" aria-controls="assignment" role="tab" data-toggle="tab">Assignment Notebook</a></li>
-          <li role="presentation" class="active"><a href="#collation" aria-controls="collation" role="tab" data-toggle="tab">Collated Notebook</a></li>
-          <li role="presentation"><a href="#named" aria-controls="named" role="tab" data-toggle="tab">With Names</a></li>
-          <li role="presentation"><a href="#summary" aria-controls="summary" role="tab" data-toggle="tab">Summary</a></li>
-        </ul>
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation"><a href="#assignment" aria-controls="assignment" role="tab" data-toggle="tab">Assignment Notebook</a></li>
+    <li role="presentation" class="active"><a href="#collation" aria-controls="collation" role="tab" data-toggle="tab">Collated Notebook</a></li>
+    <li role="presentation"><a href="#named" aria-controls="named" role="tab" data-toggle="tab">With Names</a></li>
+    <li role="presentation"><a href="#summary" aria-controls="summary" role="tab" data-toggle="tab">Summary</a></li>
+  </ul>
 
-        <!-- Tab panes -->
-        <div class="tab-content">
-          <div role="tabpanel" class="tab-pane" id="assignment">
-            <iframe src="{{ url_for('assignment_notebook', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
-          </div>
-
-          <div role="tabpanel" class="tab-pane active" id="collation">
-            <div class="row">
-              <div class="col-md-10 col-md-offset-1 content">
-                <h1><small>
-                  <a type="button" class="btn btn-default" title="download notebook" href="{{ url_for('download_collated_assignment', assignment_id=assignment.id) }}">
-                    Download <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                  </a>
-                  {{ assignment.path }}
-                </small></h1>
-
-                <iframe src="{{ url_for('collated_assignment', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
-              </div>
-            </div>
-          </div>
-
-          <div role="tabpanel" class="tab-pane" id="named">
-            <iframe src="{{ url_for('collated_assignment_with_names', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
-          </div>
-
-          <div role="tabpanel" class="tab-pane" id="summary">
-            <iframe src="{{ url_for('assignment_answer_status', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
-          </div>
-        </div>
-
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane" id="assignment">
+      <iframe src="{{ url_for('assignment_notebook', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
     </div>
+
+    <div role="tabpanel" class="tab-pane active" id="collation">
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1 content">
+          <h1><small>
+            <a type="button" class="btn btn-default" title="download notebook" href="{{ url_for('download_collated_assignment', assignment_id=assignment.id) }}">
+              Download <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+            </a>
+            {{ assignment.path }}
+          </small></h1>
+
+          <iframe src="{{ url_for('collated_assignment', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <div role="tabpanel" class="tab-pane" id="named">
+      <iframe src="{{ url_for('collated_assignment_with_names', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+    </div>
+
+    <div role="tabpanel" class="tab-pane" id="summary">
+      <iframe src="{{ url_for('assignment_answer_status', assignment_id=assignment.id) }}" frameborder="0" width="100%" scrolling="no" onload="resizeIframe(this)"></iframe>
+    </div>
+  </div>
+
 {% endblock %}

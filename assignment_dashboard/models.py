@@ -5,6 +5,9 @@ from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Int
 from sqlalchemy.orm import backref, deferred, relationship
 
 from .database import Base
+# Assignment-related models
+#
+from .nb_helpers import safe_read_notebook
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 MD5_HASH_CONSTRAINT = CheckConstraint('length(md5) = 32')
@@ -130,11 +133,8 @@ class Commit(Base):
     commit_date = Column(DateTime, nullable=False)
 
 
-# Assignment-related models
-#
-
 class Assignment(Base):
-    """A single assignment file within a repo that contains multiple assignments, one per file."""
+    """A single assignment file within an assignment repo."""
 
     __tablename__ = 'assignment'
     __table_args__ = (UniqueConstraint('repo_id', 'path'),)
@@ -145,6 +145,7 @@ class Assignment(Base):
     name = Column(String(128), nullable=False)
     nb_content = deferred(Column(Text, nullable=True))
     md5 = Column(String(32), MD5_HASH_CONSTRAINT, nullable=True)
+    due_date = Column(DateTime)
 
     repo = relationship('Repo', backref=backref('assignments', cascade='all, delete-orphan'))
     # file = relationship('FileContent',
@@ -153,13 +154,20 @@ class Assignment(Base):
 
     @property
     def content(self):
-        # FIXME get `file` relationship above working; replace this query by that
-        from sqlalchemy.orm.session import object_session
-        fc = object_session(self).query(FileCommit). \
-            filter(FileCommit.repo_id). \
-            filter(self.repo_id and FileCommit.path == self.path). \
-            first()
-        return fc.content
+        # TODO get `file` relationship above working; replace this query by
+        # that
+        return (self.query.session.query(FileCommit)
+                .filter(FileCommit.repo_id == self.repo_id)
+                .filter(FileCommit.path == self.path)
+                .one()
+                .content)
+
+    @property
+    def notebook(self):
+        content = self.content
+        if isinstance(content, bytes):
+            content = content.decode()
+        return safe_read_notebook(content)
 
 
 class AssignmentQuestion(Base):

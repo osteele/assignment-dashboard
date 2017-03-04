@@ -8,6 +8,7 @@ import re
 from collections import OrderedDict, namedtuple
 
 import arrow
+import dateutil.parser
 import nbformat
 from sqlalchemy.orm import joinedload, undefer
 
@@ -90,7 +91,8 @@ def get_assignment_responses(repo_id):
         if not fc:
             return dict(path=path, css_class='danger', status='missing', text='missing', hover='Missing')
 
-        d = dict(path=path, status='done', text=arrow.get(fc.mod_time).humanize(), hover=fc.mod_time)
+        d = dict(path=path, status='done', text=arrow.get(fc.mod_time).humanize(), hover=fc.mod_time,
+                 submission_date=fc.mod_time)
         if fc.sha in assignment_file_shas:
             d.update(dict(css_class='danger', status='unchanged', text='unchanged', hover='Unchanged from original'))
         elif not fc.file_content:
@@ -142,12 +144,12 @@ def get_assignment(assignment_id):
 
     Returns the assignment.
     """
-    assignment = (session.query(Assignment).
-                  options(joinedload(Assignment.questions).
-                          joinedload(AssignmentQuestion.responses)).
-                  options(joinedload(Assignment.repo).joinedload(Repo.owner)).
-                  filter(Assignment.id == assignment_id).
-                  one())
+    assignment = (session.query(Assignment)
+                  .options(joinedload(Assignment.questions).
+                           joinedload(AssignmentQuestion.responses))
+                  .options(joinedload(Assignment.repo).joinedload(Repo.owner))
+                  .filter(Assignment.id == assignment_id)
+                  .one())
 
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
     files_hash = hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
@@ -204,6 +206,27 @@ def get_combined_notebook(assignment_id):
                                                for response in question.responses})
                      for question in sorted(assignment.questions, key=lambda q: q.position)]
     return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
+
+
+def get_assignment_due_date(assignment):
+    if assignment.due_date:
+        return assignment.due_date
+
+    nb = assignment.notebook
+    if not nb or not nb.cells:
+        return
+
+    m = re.search('Due:?(.+)', nb.cells[0].source, re.I)
+    if not m:
+        return
+
+    s = re.sub(r'(12(:00)?)? ?noon', '12:00PM', m.group(0))
+    try:
+        d = dateutil.parser.parse(s, fuzzy=True)
+    except ValueError:
+        return
+    assignment.due_date = d
+    session.commit()
 
 
 # TODO DRY w/ get_assignment

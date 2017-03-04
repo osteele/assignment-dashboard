@@ -4,6 +4,7 @@ from datetime import date
 import arrow
 import nbformat
 import pandas as pd
+from babel.dates import format_datetime, format_timedelta
 from flask import g, make_response, redirect, render_template, url_for
 from nbconvert import HTMLExporter
 
@@ -12,8 +13,8 @@ from .database import session
 from .decorators import requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .models import Repo
-from .viewmodel import (find_assignment, get_assignment_responses, get_collated_notebook_with_names,
-                        get_combined_notebook, get_source_repos)
+from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses,
+                        get_collated_notebook_with_names, get_combined_notebook, get_source_repos)
 
 
 # Routes
@@ -45,8 +46,12 @@ def assignment_repo(repo_id):
     oldest_update_t = session.query(Repo.refreshed_at).order_by(Repo.refreshed_at.asc()).first()
     repo_update_time = arrow.get(oldest_update_t[0]).to(app.config['TZ']) if oldest_update_t else None
 
+    [get_assignment_due_date(assgn) for assgn in model.assignments]
+
     return render_template(
         'assignment_repo.html',
+        format_timedelta=format_timedelta,
+        format_datetime=format_datetime,
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
         repo_update_time=repo_update_time,
