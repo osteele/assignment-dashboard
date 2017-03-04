@@ -1,7 +1,7 @@
 version: "2.1"
 
 services:
-  flask:
+  web:
     build:
       context: .
     image: assignment-dashboard
@@ -16,5 +16,3 @@ services:
       - TZ
     ports:
       - 5000:5000
-    volumes:
-       - .:/app

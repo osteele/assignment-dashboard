@@ -1,0 +1,6 @@
+version: "2.1"
+
+services:
+  web:
+    volumes:
+       - .:/app

@@ -40,7 +40,7 @@ Set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 3. Initialize the database
 
-    docker-compose run flask initdb
+    docker-compose run web initdb
 
 This creates a database in `data/database.db`.
 
@@ -50,7 +50,7 @@ If you subsequently need to run it again in order to reset the database, it will
 
 ### 4. Add an assignment repository
 
-    $ docker-compose run flask add_repo repo_owner/repo_name
+    $ docker-compose run web add_repo repo_owner/repo_name
 
 Add a repository to the database, and download its information from GitHub.
 
@@ -70,13 +70,13 @@ The web application browses the data in this database.
 
 #### Update the database
 
-    $ docker-compose run flask updatedb
+    $ docker-compose run web updatedb
 
 Update the application database with new users and commits from GitHub.
 
 #### Set User Names
 
-    $ docker-compose run flask set_usernames usernames.csv
+    $ docker-compose run web set_usernames usernames.csv
 
 Update user names in the database from the rows in `usernames.csv`.
 
