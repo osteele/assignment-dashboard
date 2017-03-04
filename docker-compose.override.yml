@@ -2,5 +2,13 @@ version: "2.1"
 
 services:
   web:
+    environment:
+      - FLASK_DEBUG
+      - GITHUB_API_TOKEN
+      - GITHUB_CLIENT_ID
+      - GITHUB_CLIENT_SECRET
+      - SECRET_KEY
+      - SQLALCHEMY_ECHO
+      - TZ
     volumes:
        - .:/app

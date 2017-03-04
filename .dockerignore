@@ -1,6 +1,7 @@
 *.egg
 .env
 .git
+config/production.env
 data
 Dockerfile*
 docker-compose.yml
