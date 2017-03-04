@@ -68,7 +68,7 @@ def own_commit(repo, commit):
 #
 
 def get_instructor_logins(source_repo):
-    print('Reading organization members from GitHub')
+    print("Reading organization members from GitHub")
     org_name = source_repo.full_name.split('/')[0]
     org_instance = session.query(User).filter(User.login == org_name).one()
     members = [u for u in gh.get_organization(org_name).get_members()]
@@ -87,7 +87,7 @@ def get_forks(source_repo, ignore_logins=None):
     if ignore_logins is None:
         ignore_logins = get_instructor_logins(source_repo)
 
-    print('Reading repos from GitHub')
+    print("Reading repos from GitHub")
     repos = [repo for repo in source_repo.get_forks()
              if repo.owner.login not in ignore_logins]
 
@@ -101,7 +101,7 @@ user_instance_map = {}
 
 
 def save_users(users, role='student'):
-    print('Updating %ss in database' % role)
+    print("Updating %ss in database" % role)
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
     for user in users:
@@ -142,7 +142,7 @@ def get_repo_instance(repo):
 
 
 def save_repos(source_repo, repos):
-    print('Updating %d repos in database' % len(repos))
+    print("Updating %d repos in database" % len(repos))
     source_repo_instance = find_or_create(session, Repo, owner_id=get_user_instance(source_repo.owner).id, name=source_repo.name)
     session.commit()
     assert source_repo_instance.id
@@ -228,16 +228,11 @@ def get_file_commit_recs(repo, repo_commits, all_commits=False):
 
 
 def download_files(repo, repo_commits, file_commit_recs):
-    print('repo_commits', repo_commits)
-    print('file_commit_recs', file_commit_recs)
     incoming_file_shas = {item.file.sha for item in file_commit_recs}
     if not incoming_file_shas:
         return
 
     db_file_content_shas = {sha for sha, in session.query(FileContent.sha).filter(FileContent.sha.in_(incoming_file_shas))}
-    print('incoming_file_shas', incoming_file_shas)
-    print('db_file_content_shas', db_file_content_shas)
-    print('diff', incoming_file_shas - db_file_content_shas)
 
     download_commits = ((commit, {item.file.filename
                                   for item in file_commit_recs if item.commit == commit
@@ -255,14 +250,11 @@ def download_files(repo, repo_commits, file_commit_recs):
 
     seen = set()
     for commit, paths in download_commits:
-        print(commit, paths)
         items = [item
                  for item in repo.get_git_tree(commit.sha, recursive=True).tree
                  if item.path in paths]
-        print(items)
         for item in items:
             if item.sha in seen:
-                print('ignore')
                 continue
             seen |= {item.sha}
 
@@ -321,6 +313,7 @@ def update_db(source_repo_name, options={}):
     source_repo = gh.get_repo(source_repo_name)
     repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     forks = get_forks(source_repo)
+    forks = sorted(forks, key=lambda r: r.owner.login)
 
     save_users([source_repo.owner], role='organization')
     save_users([repo.owner for repo in forks], role='student')
