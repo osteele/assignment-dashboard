@@ -1,9 +1,11 @@
-*.egg
+*.egg-info
 .env
 .git
 config/production.env
 data
 Dockerfile*
-docker-compose.yml
+docker-compose*.yml
+docs
 src
+tests
 TODO.*

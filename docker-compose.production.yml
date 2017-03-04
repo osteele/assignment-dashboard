@@ -4,3 +4,5 @@ services:
   web:
     env_file:
       - ./config/production.env
+    volumes:
+       - /var/local:/app/data
