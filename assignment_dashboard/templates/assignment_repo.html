@@ -38,7 +38,7 @@
       {% endfor %}
     </tr>
 
-    {% for student in students %}
+    {% for student in students|sort(attribute='display_name', case_sensitive=False) %}
       <tr>
         <th><a href="{{ student.repo.html_url }}" title="View the student repo on GitHub">{{ student.display_name }}</a></th>
         {% for assignment in assignments %}

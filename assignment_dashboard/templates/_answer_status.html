@@ -12,14 +12,23 @@
 
 <body>
   <table class="table table-condensed table-striped">
-    <tr><th></th>{% for q_name in q_names %}<th>{{ q_name }}</th>{% endfor %}</tr>
-    {% for login in s_logins %}
-    <tr><th>{{ login }}</th>
-      {% for _ in q_names %}
-        {% if q_status[loop.index0][1][login] == 'answered' %}
+    <tr>
+      <th></th>
+      {% for question in questions %}
+        <th>{{ question }}</th>
+      {% endfor %}
+    </tr>
+
+    {% for student in students|sort() %}
+    <tr>
+      <th>{{ student }}</th>
+      {% for _ in questions %}
+        {% if status_map[loop.index0][1][student] == 'answered' %}
           <td class="success">&#10004;{% else %}
           <td class="danger">&#x2718;{% endif %}
-      </td>{% endfor %}</tr>
+      </td>
+      {% endfor %}
+    </tr>
     {% endfor %}
   </table>
 </body>

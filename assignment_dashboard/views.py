@@ -51,7 +51,7 @@ def assignment_repo(repo_id):
         assignment_repo=assignment_repo,
         repo_update_time=repo_update_time,
         assignments=model.assignments,
-        students=sorted(model.students, key=lambda u: u.display_name.lower()),
+        students=model.students,
         responses=model.responses)
 
 
@@ -126,10 +126,11 @@ def download_collated_assignment(assignment_id):
 @app.route('/assignment/<int:assignment_id>/answer_status.html')
 @requires_access('assignment')
 def assignment_answer_status(assignment_id):
-    status = get_combined_notebook(assignment_id).answer_status
+    status_map = get_combined_notebook(assignment_id).answer_status
+    students = status_map[0][1].keys() if status_map else []
     return render_template(
         '_answer_status.html',
-        q_names=[a for a, _ in status],
-        s_logins=sorted(status[0][1].keys() if status else []),
-        q_status=status
+        questions=[a for a, _ in status_map],
+        students=students,
+        status_map=status_map
     )
