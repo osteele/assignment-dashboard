@@ -48,10 +48,16 @@
       <tr>
         <th><a href="{{ student.repo.html_url }}" title="View the student repo on GitHub">{{ student.display_name }}</a></th>
         {% for assignment in assignments %}
-          {% set response = responses[assignment.id][student.user.id] %}
+          {% with response = responses[assignment.id][student.user.id] %}
           <td class="{{ response.css_class }}">
             <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="{{ response.hover }}">
-              {% if response.status == 'done' and assignment.due_date %}
+              {% if response.unchanged %}
+                unchanged from original
+              {% elif response.unavailable %}
+                unable to retrieve file
+              {% elif response.invalid_notebook %}
+                invalid notebook
+              {% elif response.status == 'done' and assignment.due_date %}
                 {% if response.submission_date <= assignment.due_date %}
                   on time
                 {% else %}
@@ -64,6 +70,7 @@
               {% endif %}
             </a>
           </td>
+          {% endwith %}
         {% endfor %}
       </tr>
     {% endfor %}
