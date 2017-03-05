@@ -87,21 +87,18 @@ def get_assignment_responses(repo_id):
     update_content_types([fc.file_content for fc in file_commits if fc.file_content])
     session.commit()
 
-    # TODO move logic from here to template
-    def file_presentation(fc, path):
+    # TODO move CSS logic from here to template
+    def file_model(fc, path):
         if not fc:
-            return dict(path=path, css_class='danger', status='missing', text='missing', hover='Missing')
+            return dict(path=path, css_class='danger', unavailable=True)
 
-        d = dict(path=path, status='done', text=arrow.get(fc.mod_time).humanize(), hover=fc.mod_time,
-                 submission_date=fc.mod_time)
+        d = dict(path=path, status='complete', submission_date=fc.mod_time)
         if fc.sha in assignment_file_shas:
             d.update(dict(css_class='danger', unchanged=True))
         elif not fc.file_content:
-            d.update(dict(css_class='danger', unavailable=True, text='empty'))
+            d.update(dict(css_class='danger', unavailable=True))
         elif fc.file_content.content_type != PYNB_MIME_TYPE:
-            d.update(dict(css_class='warning',
-                          invalid_notebook=True,                           
-                          hover='Invalid Jupyter notebook (merge conflict?)'))
+            d.update(dict(css_class='warning', invalid_notebook=True))
         return d
 
     # re-query, since commit invalidates the cache
@@ -121,7 +118,7 @@ def get_assignment_responses(repo_id):
 
     assignments = assignment_repo.assignments
     student_repos = session.query(Repo).filter(Repo.source_id.in_(a.repo_id for a in assignments)).options(joinedload(Repo.owner)).all()
-    responses = {assignment.id: {fork.owner_id: file_presentation(user_path_files.get((fork.owner_id, assignment.path)), assignment.path)
+    responses = {assignment.id: {fork.owner_id: file_model(user_path_files.get((fork.owner_id, assignment.path)), assignment.path)
                                  for fork in student_repos}
                  for assignment in assignments}
 

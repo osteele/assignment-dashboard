@@ -30,7 +30,7 @@
     <a class="btn btn-default btn-sm" href="{{ url_for('assignment_repo_csv', repo_id=assignment_repo.id )}}">Download CSV <i class="fa fa-table" aria-hidden="true"></i></a>
   </div>
 
-  <table class="table table-condensed table-striped">
+  <table class="table table-condensed table-striped table-hover">
     <tr>
       <th></th>
       {% for assignment in assignments %}
@@ -50,20 +50,20 @@
         {% for assignment in assignments %}
           {% with response = responses[assignment.id][student.user.id] %}
           <td class="{{ response.css_class }}">
-            <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="{{ response.hover }}">
+            <a href="{{ student.repo.html_url }}/blob/master/{{ assignment.path }}" title="view on GitHub">
               {% if response.unchanged %}
                 unchanged from original
               {% elif response.unavailable %}
                 unable to retrieve file
               {% elif response.invalid_notebook %}
                 invalid notebook
-              {% elif response.status == 'done' and assignment.due_date %}
+              {% elif response.status == 'complete' and assignment.due_date %}
                 {% if response.submission_date <= assignment.due_date %}
                   on time
                 {% else %}
                   {{ response.submission_date | timesince(assignment.due_date) }} late
                 {% endif %}
-              {% elif response.status == 'done' %}
+              {% elif response.status == 'complete' %}
                 {{ response.submission_date | datetimeformat('%a %b %-d %l:%M%p') }}
               {% else %}
                 {{ response.text }}
