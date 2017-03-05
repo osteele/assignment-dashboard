@@ -5,13 +5,14 @@ import arrow
 import nbformat
 import pandas as pd
 from babel.dates import format_datetime, format_timedelta
-from flask import g, make_response, redirect, render_template, url_for
+from flask import flash, g, make_response, redirect, render_template, request, url_for
 from nbconvert import HTMLExporter
 
 from . import app
 from .database import session
-from .decorators import requires_access
+from .decorators import login_required, requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
+from .model_helpers import update_names_from_csv
 from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses,
                         get_collated_notebook_with_names, get_combined_notebook, get_source_repos)
@@ -35,6 +36,26 @@ def index():
 @app.errorhandler(401)
 def unauthorized_error(error):
     return render_template('401.html'), 401
+
+
+@app.route('/upload_names', methods=['GET', 'POST'])
+@login_required
+def upload_names():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file:
+            msg = update_names_from_csv(file.stream)
+            flash(msg)
+            return redirect(url_for('upload_names'))
+    return render_template('upload_names.html')
 
 
 @app.route('/assignment_repo/<int:repo_id>')

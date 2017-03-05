@@ -1,13 +1,11 @@
 import os
-import re
 import sys
-from collections import defaultdict
 
 import click
-import pandas as pd
 
 from . import app
 from .database import db, session
+from .model_helpers import update_names_from_csv
 from .models import Assignment, Repo, User
 
 
@@ -78,28 +76,7 @@ def delete_assignments_cache():
 @click.argument('csv_filename', type=click.Path(exists=True))
 def set_usernames(csv_filename):
     """Set usernames to values from a CSV file."""
-    df = pd.DataFrame.from_csv(click.format_filename(csv_filename), index_col=None)
-    name_col = next(col for col in df.columns if re.match(r'(user ?)?names?', col, re.I))
-    github_col = next(col for col in df.columns if re.search(r'git', col, re.I))
-    logins = set(df[github_col])
-    users = {u.login: u for u in session.query(User).filter(User.login.in_(logins))}
-
-    unknown = logins - set(users.keys())
-    if unknown:
-        print('not in the database:', unknown)
-
-    counts = defaultdict(lambda: 0)
-    for _, row in df.iterrows():
-        login, name = row[github_col], row[name_col]
-        if login not in users:
-            counts['not in the database'] += 1
-        elif users[login].fullname == name:
-            counts['unchanged'] += 1
-        else:
-            users[login].fullname = name
-            counts['updated'] += 1
-    session.commit()
-    print("; ".join("%d records %s" % (v, k) for k, v in counts.items()))
+    print(update_names_from_csv(click.format_filename(csv_filename)))
 
 
 @app.cli.command()
