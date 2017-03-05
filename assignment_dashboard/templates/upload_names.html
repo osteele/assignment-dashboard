@@ -2,19 +2,11 @@
 {% block title %}Upload names{% endblock %}
 
 {% block content %}
-  {% with messages = get_flashed_messages() %}
-    {% for message in messages %}
-      <div class="alert alert-info" role="alert">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endwith %}
-
   <form method=post enctype=multipart/form-data>
     <div class="form-group">
       <label for="file">File input</label>
       <input type=file name=file id=file>
-      <p class="help-block">Example block-level help text here.</p>
+      <p class="help-block">Upload a CSV file with .</p>
      </div>
      <button class="btn btn-default" type="submit">Upload</button>
   </form>

@@ -41,6 +41,14 @@
     {% block header %}{% endblock %}
 
     <div class="container">
+      {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+          <div class="alert alert-info" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
       {% block content %}{% endblock %}
     </div>
   </body>
