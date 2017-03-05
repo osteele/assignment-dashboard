@@ -6,8 +6,3 @@ services:
       - ./config/production.env
     volumes:
        - /var/local:/app/data
-
-  nginx:
-    build: nginx/
-    ports:
-      - 80:80

@@ -6,3 +6,8 @@ services:
       context: .
     image: assignment-dashboard
     container_name: assignment-dashboard
+
+  nginx:
+    build: nginx/
+    ports:
+      - 80:80
