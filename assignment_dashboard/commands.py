@@ -3,6 +3,9 @@ import sys
 
 import click
 
+from alembic import command
+from alembic.config import Config
+
 from . import app
 from .database import db, session
 from .model_helpers import update_names_from_csv
@@ -23,8 +26,6 @@ def initdb():
     """Initialize the database."""
     db.drop_all()
     db.create_all()
-    from alembic.config import Config
-    from alembic import command
     alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../migrations/alembic.ini"))
     command.stamp(alembic_cfg, "head")
 
@@ -46,6 +47,9 @@ def add_repo(repo_name):
 def updatedb(**options):
     # return
     """Update the database from GitHub."""
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../migrations/alembic.ini"))
+    command.upgrade(alembic_cfg, "head")
+
     assert_github_token()
     repos = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     if not repos:
