@@ -222,7 +222,8 @@ def get_file_commit_recs(repo, repo_commits, all_commits=False):
         for item in commit.files
         if item.sha]
 
-    print('Processing %d file commits' % len(file_commit_recs))
+    if file_commit_recs:
+        print('Processing %d file commits' % len(file_commit_recs))
 
     return file_commit_recs
 
