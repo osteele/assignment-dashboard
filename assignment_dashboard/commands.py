@@ -23,6 +23,10 @@ def initdb():
     """Initialize the database."""
     db.drop_all()
     db.create_all()
+    from alembic.config import Config
+    from alembic import command
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../migrations/alembic.ini"))
+    command.stamp(alembic_cfg, "head")
 
 
 @app.cli.command()
