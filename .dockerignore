@@ -10,3 +10,4 @@ nginx
 src
 tests
 TODO.*
+worker

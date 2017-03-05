@@ -14,3 +14,10 @@ services:
        - .:/app
     ports:
       - 5000:5000
+
+  # worker:
+  #   environment:
+  #     - GITHUB_API_TOKEN
+  #   volumes:
+  #      - ./data:/app/data
+  #      - ./log:/var/log

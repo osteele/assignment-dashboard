@@ -2,10 +2,10 @@ version: "2.1"
 
 services:
   web:
-    build:
-      context: .
+    build: .
     image: assignment-dashboard
-    container_name: assignment-dashboard
+    # the default override publishes port 5000
+    # the production override expose this port internally
 
   nginx:
     build: nginx/

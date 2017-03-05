@@ -1,0 +1,11 @@
+#!/bin/bash -eu
+
+date
+
+# source /worker/.env trips on the * in one of the values
+while read line; do
+    export "$line"
+done < /worker/.env
+
+cd /app
+/usr/local/bin/flask updatedb

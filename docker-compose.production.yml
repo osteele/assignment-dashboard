@@ -12,6 +12,18 @@ services:
         max-size: 10m
         max-file: "3"
 
+  worker:
+    build: worker
+    container_name: worker
+    env_file:
+      - ./config/production.env
+    volumes:
+       - /var/local:/app/data
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
   nginx:
     container_name: nginx
     logging:
