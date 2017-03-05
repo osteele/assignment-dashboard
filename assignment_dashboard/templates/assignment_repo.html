@@ -19,8 +19,8 @@
   <div class="container">
     <div class="alert alert-info alert-dismissible" role="alert">
       <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <p>{% if repo_update_time %}Updated {{ repo_update_time.strftime('%l:%M%p, %A %B %-d') }}.{% else %}Never updated.{% endif %}</p>
-      <p>Execute the <tt>flask updatedb</tt> command to update the database.</p>
+      <p>{% if repo_update_time %}Updated {{ repo_update_time | timesince }} ago.{% else %}Never updated.{% endif %}</p>
+      <p>Execute <tt>flask updatedb</tt> to update the database.</p>
     </div>
   </div>
 {% endblock %}
@@ -40,7 +40,7 @@
     <tr>
       <th>Due date</th>
       {% for assignment in assignments %}
-        <td class="small">{% if assignment.due_date %}{{ assignment.due_date.strftime('%a %b %-d<br>%l:%M%p')|safe }}{% endif %}</td>
+        <td class="small">{% if assignment.due_date %}{{ assignment.due_date | datetimeformat('%a %b %-d<br>%l:%M%p') | safe }}{% endif %}</td>
       {% endfor %}
     </tr>
 
@@ -55,10 +55,10 @@
                 {% if response.submission_date <= assignment.due_date %}
                   on time
                 {% else %}
-                  {{ format_timedelta(response.submission_date - assignment.due_date) }} late
+                  {{ response.submission_date | timesince(assignment.due_date) }} late
                 {% endif %}
               {% elif response.status == 'done' %}
-                {{ response.submission_date.strftime('%a %b %-d %l:%M%p') }}
+                {{ response.submission_date | datetimeformat('%a %b %-d %l:%M%p') }}
               {% else %}
                 {{ response.text }}
               {% endif %}

@@ -1,9 +1,10 @@
 import os
-from datetime import date
+from datetime import date, datetime
 
 import arrow
 import nbformat
 import pandas as pd
+import pytz
 from babel.dates import format_datetime, format_timedelta
 from flask import flash, g, make_response, redirect, render_template, request, url_for
 from nbconvert import HTMLExporter
@@ -16,6 +17,17 @@ from .model_helpers import update_names_from_csv
 from .models import Repo
 from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses,
                         get_collated_notebook_with_names, get_combined_notebook, get_source_repos)
+
+
+@app.template_filter()
+def timesince(t0, t1=None):
+    t1 = t1 or datetime.now(pytz.utc)
+    return format_timedelta(t0 - t1)
+
+
+@app.template_filter()
+def datetimeformat(dt, fmt):
+    return dt.strftime(fmt)
 
 
 # Routes
@@ -64,15 +76,17 @@ def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
 
-    oldest_update_t = session.query(Repo.refreshed_at).order_by(Repo.refreshed_at.asc()).first()
-    repo_update_time = arrow.get(oldest_update_t[0]).to(app.config['TZ']) if oldest_update_t else None
+    oldest_update = (session.query(Repo.refreshed_at)
+                     .filter(Repo.source_id == assignment_repo.id)
+                     .order_by(Repo.refreshed_at.asc())
+                     .first())
+    repo_update_time = arrow.get(oldest_update[0]).to(app.config['TZ']) if oldest_update else None
 
-    [get_assignment_due_date(assgn) for assgn in model.assignments]
+    for assgn in model.assignments:
+        get_assignment_due_date(assgn)
 
     return render_template(
         'assignment_repo.html',
-        format_timedelta=format_timedelta,
-        format_datetime=format_datetime,
         classroom_owner=assignment_repo.owner,
         assignment_repo=assignment_repo,
         repo_update_time=repo_update_time,
