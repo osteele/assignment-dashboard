@@ -11,6 +11,8 @@ RUN apt-get install -y git-core
 RUN apt-get install -y sqlite3 libsqlite3-dev
 RUN apt-get install -y postgresql libpq-dev
 
+RUN pip3 install --upgrade pip
+
 # provide cached layer for expensive requirements, beneath requirements.txt
 RUN pip3 install nbconvert nbformat numpy pandas
 
