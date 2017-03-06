@@ -323,6 +323,8 @@ def update_db(source_repo_name, options={}):
     repos = [source_repo] + forks
     if options.get('users'):
         repos = [repo for repo in repos if repo.owner.login in options['users']]
+    if options.get('oldest'):
+        repos = sorted(repos, key=lambda r: r.updated_at or datetime(1972, 1, 1))
     if options.get('repo_limit'):
         repos = repos[:options['repo_limit']]
 

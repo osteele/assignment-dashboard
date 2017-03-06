@@ -20,4 +20,3 @@ services:
   #     - GITHUB_API_TOKEN
   #   volumes:
   #      - ./data:/app/data
-  #      - ./log:/var/log

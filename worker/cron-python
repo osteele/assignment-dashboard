@@ -1,2 +1,0 @@
-# placed in /etc/cron.d
-0 * * * * root /worker/update-db >> /var/log/updatedb.log 2>&1

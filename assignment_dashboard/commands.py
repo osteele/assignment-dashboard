@@ -43,6 +43,7 @@ def add_repo(repo_name):
 @click.option('--repo-limit', type=click.INT, help="Limit the number of repos.")
 @click.option('--commit-limit', type=click.INT, help="Limit the number of commits.")
 @click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
+@click.option('--oldest-first', is_flag=True, help="Oldest repos first")
 @click.option('--users', help="Restrict to logins in this comma-separated list")
 def updatedb(**options):
     # return

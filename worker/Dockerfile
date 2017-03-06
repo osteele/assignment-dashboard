@@ -4,12 +4,14 @@ MAINTAINER Oliver Steele <steele@osteele.com>
 
 RUN apt-get install -y cron
 
-COPY cron-python /etc/cron.d/
-RUN chmod 0644 /etc/cron.d/cron-python
+COPY cron-updatedb /etc/cron.d/
+RUN chmod 0644 /etc/cron.d/cron-updatedb
 
 RUN mkdir /worker
-COPY update-db /worker
-RUN chmod +x /worker/update-db
+COPY updatedb /worker
+RUN chmod +x /worker/updatedb
+
+RUN touch /var/log/updatedb.log
 
 ENTRYPOINT ["/bin/bash"]
-CMD ["-c", "env > /worker/.env && cron -f"]
+CMD ["-c", "env > /worker/.env && cron && tail -f /var/log/updatedb.log"]

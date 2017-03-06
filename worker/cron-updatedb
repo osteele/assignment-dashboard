@@ -1,0 +1,2 @@
+# placed in /etc/cron.d
+*/20 * * * * root /worker/updatedb --oldest --repo-limit 20 >> /var/log/updatedb.log 2>&1
