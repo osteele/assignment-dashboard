@@ -19,7 +19,9 @@
   <div class="container">
     <div class="alert alert-info alert-dismissible" role="alert">
       <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <p>{% if repo_update_time %}Updated {{ repo_update_time | timesince }} ago.{% else %}Never updated.{% endif %}</p>
+      <p>
+        The least recently updated repo was {% if repo_update_time %}updated {{ repo_update_time | timesince }} ago at {{ repo_update_time | datetimeformat('%a %b %-d %l:%M %p') }}.
+        {% else %}never updated.{% endif %}</p>
       <p>Execute <tt>flask updatedb</tt> to update the database.</p>
     </div>
   </div>

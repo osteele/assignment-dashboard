@@ -23,9 +23,9 @@ from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment
 #
 
 @app.template_filter()
-def timesince(t0, t1=None):
-    t1 = t1 or datetime.now(pytz.utc)
-    return format_timedelta(t0 - t1)
+def timesince(dt, t0=None):
+    t0 = t0 or datetime.now(pytz.utc)
+    return format_timedelta(dt - t0)
 
 
 @app.template_filter()
@@ -85,11 +85,12 @@ def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
 
-    oldest_update = (session.query(Repo.refreshed_at)
-                     .filter(Repo.source_id == assignment_repo.id)
-                     .order_by(Repo.refreshed_at.asc())
-                     .first())
-    repo_update_time = arrow.get(oldest_update[0]).to(app.config['TZ']) if oldest_update else None
+    oldest_update, = (session.query(Repo.refreshed_at)
+                      .filter(Repo.source_id == assignment_repo.id)
+                      .order_by(Repo.refreshed_at.asc())
+                      .first())
+    repo_update_time = arrow.get(oldest_update).to(app.config['TZ']) if oldest_update else None
+    # print('t', oldest_update, repo_update_time)
 
     for assgn in model.assignments:
         get_assignment_due_date(assgn)
