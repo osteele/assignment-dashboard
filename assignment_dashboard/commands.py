@@ -45,8 +45,8 @@ def add_repo(repo_name):
 @click.option('--reprocess', is_flag=True, help="Reprocess previously-seen commits")
 @click.option('--oldest-first', is_flag=True, help="Oldest repos first")
 @click.option('--users', help="Restrict to logins in this comma-separated list")
+@click.option('--update-users/--no-update-users', default=True, help="Update user list")
 def updatedb(**options):
-    # return
     """Update the database from GitHub."""
     alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../migrations/alembic.ini"))
     command.upgrade(alembic_cfg, "head")

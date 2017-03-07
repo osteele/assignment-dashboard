@@ -5,8 +5,6 @@ from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Int
 from sqlalchemy.orm import backref, deferred, relationship
 
 from .database import Base
-# Assignment-related models
-#
 from .nb_helpers import safe_read_notebook
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
@@ -90,6 +88,10 @@ class User(Base):
                                  secondaryjoin=id == organization_users_table.c.user_id,
                                  back_populates='members')
 
+    @property
+    def is_organization(self):
+        return self.gh_type == 'Organization'
+
 
 class Repo(Base):
     __tablename__ = 'repo'
@@ -132,6 +134,9 @@ class Commit(Base):
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True)
     commit_date = Column(DateTime, nullable=False)
 
+
+# Assignment-related models
+#
 
 class Assignment(Base):
     """A single assignment file within an assignment repo."""

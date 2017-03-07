@@ -1,11 +1,5 @@
 """
-Update the database.
-
-This depends on the database already having been created.
-
-The code is meant to be run as a script.
-It's written in notebook format rather than packaged into a function that can be run on demand.
-See the README for a discussion.
+Update the database from GitHub.
 """
 
 import base64
@@ -67,7 +61,7 @@ def own_commit(repo, commit):
 # read the repos
 #
 
-def get_instructor_logins(source_repo):
+def update_instructor_logins(source_repo):
     print("Reading organization members from GitHub")
     org_name = source_repo.full_name.split('/')[0]
     org_instance = session.query(User).filter(User.login == org_name).one()
@@ -80,17 +74,14 @@ def get_instructor_logins(source_repo):
             member_instance.organizations.append(org_instance)
     session.commit()
 
-    return {u.login for u in members}
 
-
-def get_forks(source_repo, ignore_logins=None):
-    if ignore_logins is None:
-        ignore_logins = get_instructor_logins(source_repo)
-
+def get_forks(source_repo):
     print("Reading repos from GitHub")
-    repos = [repo for repo in source_repo.get_forks()
-             if repo.owner.login not in ignore_logins]
-
+    owner = get_repo_db_instance(source_repo).owner
+    instructor_logins = {user.login for user in owner.members} if owner.is_organization else {owner.login}
+    repos = [repo
+             for repo in source_repo.get_forks()
+             if repo.owner.login not in instructor_logins]
     return repos
 
 
@@ -105,11 +96,13 @@ def save_users(users, role='student'):
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
     for user in users:
-        attrs = dict(login=user.login,
-                     avatar_url=user.avatar_url or repo.owner.gravatar_url,
-                     gh_type=user.type,
-                     role=role,
-                     **dict(fullname=user.name) if user.name else {})
+        attrs = dict(
+            login=user.login,
+            avatar_url=user.avatar_url or repo.owner.gravatar_url,
+            gh_type=user.type,
+            role=role,
+            **dict(fullname=user.name) if user.name else {},
+        )
 
         instance = saved_instances.get(user.login)
         if instance:
@@ -125,7 +118,11 @@ def save_users(users, role='student'):
 
 
 def get_user_instance(user):
-    return user_instance_map[user.login]
+    if user_instance_map:
+        return user_instance_map[user.login]
+    else:
+        return User.query.filter(User.login == user.login).one()
+
 
 # update repos
 #
@@ -157,7 +154,7 @@ def save_repos(source_repo, repos):
 # record file commits
 #
 
-def gh2db_repo(gh_repo):
+def get_repo_db_instance(gh_repo):
     owner_login, repo_name = gh_repo.full_name.split('/')
     instance = (session.query(Repo)
                 .join(Repo.owner)
@@ -168,7 +165,7 @@ def gh2db_repo(gh_repo):
 
 
 def get_new_repo_commits(repo, commit_limit=None):
-    repo_instance = gh2db_repo(repo)
+    repo_instance = get_repo_db_instance(repo)
 
     saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
     saved_commit_shas = {commit.sha for commit in saved_commits}
@@ -280,7 +277,7 @@ def update_file_commits(repo, file_commit_recs):
 #
 
 def record_repo_commits(repo, repo_commits, timestamp):
-    repo_instance = gh2db_repo(repo)
+    repo_instance = get_repo_db_instance(repo)
     repo_instance.refreshed_at = timestamp
 
     commit_instances = [Commit(repo_id=get_repo_instance(repo).id,
@@ -312,18 +309,23 @@ def add_repo(repo_name):
 
 def update_db(source_repo_name, options={}):
     source_repo = gh.get_repo(source_repo_name)
+
+    if options.get('update_users'):
+        save_users([source_repo.owner], role='organization')
+        save_users([repo.owner for repo in forks], role='student')
+        update_instructor_logins(source_repo)
+
     repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     forks = get_forks(source_repo)
     forks = sorted(forks, key=lambda r: r.owner.login)
 
-    save_users([source_repo.owner], role='organization')
-    save_users([repo.owner for repo in forks], role='student')
-    save_repos(source_repo, forks)
+    if options.get('update_users'):
+        save_repos(source_repo, forks)
 
     repos = [source_repo] + forks
     if options.get('users'):
         repos = [repo for repo in repos if repo.owner.login in options['users']]
-    if options.get('oldest'):
+    if options.get('oldest_first'):
         repos = sorted(repos, key=lambda r: r.updated_at or datetime(1972, 1, 1))
     if options.get('repo_limit'):
         repos = repos[:options['repo_limit']]
