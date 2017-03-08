@@ -1,23 +1,21 @@
-FROM ubuntu:xenial
+FROM python:3.6
 
 MAINTAINER Oliver Steele <steele@osteele.com>
 
 ENV DEBIAN_FRONTEND noninteractive
-
-# install Python, git, sqlite3, and postgresql
 RUN apt-get update -y
-RUN apt-get install -y python3-pip python3-dev build-essential
-RUN apt-get install -y git-core
-RUN apt-get install -y sqlite3 libsqlite3-dev
-RUN apt-get install -y postgresql libpq-dev
+
+WORKDIR /app
+COPY Aptfile /app/Aptfile
+RUN egrep -v '#|^$' /app/Aptfile | xargs apt-get -y --force-yes install
 
 RUN pip3 install --upgrade pip
 
 # provide cached layer for expensive requirements, beneath requirements.txt
-RUN pip3 install nbconvert nbformat numpy pandas
+COPY requirements-cached.txt /app/requirements-cached.txt
+RUN pip3 install -r requirements-cached.txt
 
 # provide cached layer for requirements, beneath rest of sources
-WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install -r requirements.txt
 

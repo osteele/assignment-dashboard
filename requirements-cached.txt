@@ -1,0 +1,7 @@
+# This is the subset of requirements.txt that's so expensive to install
+# that we don't want to cache them into a separate Docker layer.
+
+nbconvert
+nbformat
+numpy
+pandas

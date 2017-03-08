@@ -1,0 +1,10 @@
+# Dockerfile installs these via apt-get.
+
+#python3-pip
+#python3-dev
+build-essential
+git-core
+sqlite3
+libsqlite3-dev
+postgresql-client
+libpq-dev
