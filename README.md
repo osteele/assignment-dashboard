@@ -33,9 +33,9 @@ Do these once:
 
 For example: `pip install docker-compose`; or one of the installers [here](https://docs.docker.com/compose/install/).
 
-### 2. Retrieve a GitHub personal API token
+### 2. Create a GitHub personal API token
 
-[Create a personal GitHub API token](https://github.com/blog/1509-personal-api-tokens).
+[Create a GitHub personal API token](https://github.com/blog/1509-personal-api-tokens).
 Set the `GITHUB_API_TOKEN` environment variable to this value.
 
 ### 3. Initialize the database
