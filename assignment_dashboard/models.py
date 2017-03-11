@@ -18,11 +18,16 @@ def base__repr__(self):
             return True
         return len(v) < 100
 
+    def format_value(v):
+        if hasattr(getattr(v, 'isoformat', None), '__call__'):
+            return v.isoformat()
+        return repr(v)
+
     cols = [c.name for c in self.__table__.columns]
     attrs = {k: getattr(self, k) for k in cols}
     return "<{} {})>".format(
         self.__class__.__name__,
-        ', '.join("%s=%r" % (k, v)
+        ', '.join("%s=%s" % (k, format_value(v))
                   for k, v in attrs.items()
                   if v and short_enough(v)))
 Base.__repr__ = base__repr__
