@@ -312,13 +312,14 @@ def update_db(source_repo_name, options={}):
 
     if options.get('update_users'):
         save_users([source_repo.owner], role='organization')
-        save_users([repo.owner for repo in forks], role='student')
         update_instructor_logins(source_repo)
 
     repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
     forks = get_forks(source_repo)
-    forks = sorted(forks, key=lambda r: r.owner.login)
+    if options.get('update_users'):
+        save_users([repo.owner for repo in forks], role='student')
 
+    forks = sorted(forks, key=lambda r: r.owner.login)
     if options.get('update_users'):
         save_repos(source_repo, forks)
 
