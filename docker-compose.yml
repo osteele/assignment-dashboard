@@ -4,10 +4,18 @@ services:
   web:
     build: .
     image: assignment-dashboard
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
     # the default override publishes port 5000
-    # the production override expose this port internally
+    # the production override *exposes* it instead
 
   nginx:
     build: nginx/
     ports:
       - 80:80
+
+  redis:
+    image: redis:3
+    command: redis-server --appendonly yes

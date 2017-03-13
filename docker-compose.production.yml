@@ -30,3 +30,7 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+
+  redis:
+    volumes:
+      - /var/assignment-dashboard/redis:/data

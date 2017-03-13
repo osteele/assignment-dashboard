@@ -7,13 +7,13 @@ import pickle
 import re
 from collections import OrderedDict, namedtuple
 
-import arrow
 import dateutil.parser
 import nbformat
 from sqlalchemy.orm import joinedload, undefer
 
 from nbcollate import NotebookCollator
 
+from . import app  # for cache
 from .database import session
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .helpers import lexituples
@@ -138,6 +138,17 @@ def find_assignment(assignment_id):
     return session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).one()
 
 
+def get_assignment_responses_hash(assignment_id):
+    assignment = (session.query(Assignment)
+                  .options(joinedload(Assignment.questions).
+                           joinedload(AssignmentQuestion.responses))
+                  .options(joinedload(Assignment.repo).joinedload(Repo.owner))
+                  .filter(Assignment.id == assignment_id)
+                  .one())
+    files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
+    return hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
+
+
 def get_assignment(assignment_id):
     """Update an assignment's related AssignmentQuestions and AssignmentQuestionResponess.
 
@@ -150,10 +161,8 @@ def get_assignment(assignment_id):
                   .filter(Assignment.id == assignment_id)
                   .one())
 
-    files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
-    files_hash = hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
-
-    if assignment and assignment.md5 == files_hash:
+    files_hash = get_assignment_responses_hash(assignment_id)
+    if assignment.md5 == files_hash:
         return assignment
 
     file_commits = [fc
@@ -229,7 +238,7 @@ def get_assignment_due_date(assignment):
 
 
 # TODO DRY w/ get_assignment
-def get_collated_notebook_with_names(assignment_id):
+def _get_collated_notebook_with_names(assignment_id):
     assignment = get_assignment(assignment_id)
 
     file_commits = [fc
@@ -254,3 +263,13 @@ def get_collated_notebook_with_names(assignment_id):
 
     collator = NotebookCollator(assignment_nb, student_nbs)
     return collator.get_collated_notebook(clear_outputs=True, include_usernames=True)
+
+
+def get_collated_notebook_with_names(assignment_id):
+    key = 'collated_notebook/' + str(assignment_id)
+    saved_hash, result = app.cache.get(key) or (None, None)
+    current_hash = get_assignment_responses_hash(assignment_id)
+    if current_hash != saved_hash:
+        result = _get_collated_notebook_with_names(assignment_id)
+        app.cache.set(key, (current_hash, result))
+    return result

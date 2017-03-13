@@ -15,6 +15,10 @@ services:
     ports:
       - 5000:5000
 
+  redis:
+    volumes:
+      - ./data/redis:/data
+
   # worker:
   #   environment:
   #     - GITHUB_API_TOKEN

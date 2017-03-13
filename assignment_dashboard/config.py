@@ -19,3 +19,6 @@ class BaseConfig(object):
         GITHUB_CLIENT_SECRET = os.environ['GITHUB_CLIENT_SECRET']
     else:
         REQUIRE_LOGIN = False
+
+    if 'REDIS_HOST' in os.environ:
+        REDIS_HOST = os.environ.get('REDIS_HOST')
