@@ -7,7 +7,7 @@ services:
     env_file:
       - ./config/production.env
     volumes:
-       - /var/local:/app/data
+       - /var/assignment-dashboard/sqlite:/app/data
     logging:
       options:
         max-size: 10m
@@ -20,7 +20,7 @@ services:
     env_file:
       - ./config/production.env
     volumes:
-       - /var/local:/app/data
+       - /var/assignment-dashboard/sqlite:/app/data
     logging:
       options:
         max-size: 10m
@@ -36,5 +36,6 @@ services:
 
   redis:
     restart: always
+    container_name: redis
     volumes:
       - /var/assignment-dashboard/redis:/data
