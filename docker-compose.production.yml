@@ -2,6 +2,7 @@ version: "2.1"
 
 services:
   web:
+    restart: always
     container_name: web
     env_file:
       - ./config/production.env
@@ -13,6 +14,7 @@ services:
         max-file: "3"
 
   worker:
+    restart: always
     build: worker
     container_name: worker
     env_file:
@@ -26,11 +28,13 @@ services:
 
   nginx:
     container_name: nginx
+    restart: always
     logging:
       options:
         max-size: 10m
         max-file: "3"
 
   redis:
+    restart: always
     volumes:
       - /var/assignment-dashboard/redis:/data
