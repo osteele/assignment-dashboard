@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-date
+date  # for the log
 
 # source /worker/.env trips on the * in one of the values
 while read line; do
@@ -8,4 +8,4 @@ while read line; do
 done < /worker/.env
 
 cd /app
-/usr/local/bin/flask updatedb
+/usr/local/bin/flask updatedb "$@"

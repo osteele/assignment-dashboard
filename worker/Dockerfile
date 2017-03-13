@@ -9,7 +9,6 @@ RUN chmod 0644 /etc/cron.d/cron-updatedb
 
 RUN mkdir /worker
 COPY updatedb /worker
-RUN chmod +x /worker/updatedb
 
 RUN touch /var/log/updatedb.log
 
