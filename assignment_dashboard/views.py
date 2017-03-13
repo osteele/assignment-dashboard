@@ -48,6 +48,11 @@ def index():
         return render_template('index.html', repos=repos)
 
 
+@app.route('/health')
+def health_check():
+    return 'success'
+
+
 @app.errorhandler(401)
 def unauthorized_error(error):
     return render_template('401.html'), 401

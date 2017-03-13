@@ -20,6 +20,8 @@ RUN pip3 install --no-cache-dir -e .
 # Flask requires this
 ENV FLASK_APP=assignment_dashboard
 
+HEALTHCHECK CMD curl --fail http://localhost:5000/health || exit 1
+
 EXPOSE 5000
 
 ENTRYPOINT ["flask"]
