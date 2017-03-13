@@ -10,8 +10,9 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <li>{{ classroom_owner.login }}</li>
-    <li><a href="/">{{ assignment.repo.name }}</a></li>
+    <li><a href="/">Home</a></li>
+    <li><a href="/">{{ classroom_owner.login }}</a></li>
+    <li><a href="{{ url_for('assignment_repo', repo_id=assignment.repo_id) }}">{{ assignment.repo.name }}</a></li>
     <li class="active">{{ assignment.name }}</li>
 {% endblock %}
 

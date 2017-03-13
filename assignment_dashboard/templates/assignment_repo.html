@@ -2,7 +2,8 @@
 {% block title %}{{ assignment_repo.owner.login }}/{{ assignment_repo.name }}{% endblock %}
 
 {% block breadcrumbs %}
-  <li>{{ classroom_owner.login }}</li>
+  <li><a href="/">Home</a></li>
+  <li><a href="/">{{ classroom_owner.login }}</a></li>
   <li class="active">{{ assignment_repo.name }}</li>
 {% endblock %}
 
