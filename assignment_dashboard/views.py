@@ -15,8 +15,8 @@ from .decorators import login_required, requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .model_helpers import InvalidInput, update_names_from_csv
 from .models import Repo
-from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses,
-                        get_collated_notebook_with_names, get_combined_notebook, get_source_repos)
+from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses, get_collated_notebook,
+                        get_source_repos, update_assignment_responses)
 
 
 # Filters
@@ -155,25 +155,25 @@ def assignment_notebook(assignment_id):
 @app.route('/assignment/<int:assignment_id>/collated.ipynb.html')
 @requires_access('assignment')
 def collated_assignment(assignment_id):
-    model = get_combined_notebook(assignment_id)
-    return HTMLExporter().from_notebook_node(model.collated_nb)
+    nb = get_collated_notebook(assignment_id, include_usernames=False)
+    return HTMLExporter().from_notebook_node(nb)
 
 
 @app.route('/assignment/<int:assignment_id>/named.ipynb.html')
 @requires_access('assignment')
 def collated_assignment_with_names(assignment_id):
-    nb = get_collated_notebook_with_names(assignment_id)
+    nb = get_collated_notebook(assignment_id, include_usernames=True)
     return HTMLExporter().from_notebook_node(nb)
 
 
 @app.route('/assignment/<int:assignment_id>/collated.ipynb')
 @requires_access('assignment')
 def download_collated_assignment(assignment_id):
-    model = get_combined_notebook(assignment_id)
-    collated_nb_name = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
+    filename = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
+    nb = get_collated_notebook(assignment_id, include_usernames=False)
 
-    response = make_response(nbformat.writes(model.collated_nb))
-    response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % collated_nb_name
+    response = make_response(nbformat.writes(nb))
+    response.headers['Content-Disposition'] = "attachment; filename*=utf-8''%s" % filename
     response.headers['Content-Type'] = PYNB_MIME_TYPE
     return response
 
@@ -181,7 +181,10 @@ def download_collated_assignment(assignment_id):
 @app.route('/assignment/<int:assignment_id>/answer_status.html')
 @requires_access('assignment')
 def assignment_answer_status(assignment_id):
-    status_map = get_combined_notebook(assignment_id).answer_status
+    assignment = update_assignment_responses(assignment_id)
+    status_map = [(question.question_name, {(response.user.fullname or response.user.login): response.status
+                                            for response in question.responses})
+                  for question in sorted(assignment.questions, key=lambda q: q.position)]
     students = status_map[0][1].keys() if status_map else []
     return render_template(
         '_answer_status.html',

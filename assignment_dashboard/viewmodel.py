@@ -138,33 +138,15 @@ def find_assignment(assignment_id):
     return session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).one()
 
 
-def get_assignment_responses_hash(assignment_id):
-    assignment = (session.query(Assignment)
-                  .options(joinedload(Assignment.questions).
-                           joinedload(AssignmentQuestion.responses))
-                  .options(joinedload(Assignment.repo).joinedload(Repo.owner))
-                  .filter(Assignment.id == assignment_id)
-                  .one())
+def get_assignment_response_checksum(assignment):
+    """Return a constant that detects whether the set or contents of response files changes."""
+    # FIXME restrict to forks of the assignment repo
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
     return hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
 
 
-def get_assignment(assignment_id):
-    """Update an assignment's related AssignmentQuestions and AssignmentQuestionResponess.
-
-    Returns the assignment.
-    """
-    assignment = (session.query(Assignment)
-                  .options(joinedload(Assignment.questions).
-                           joinedload(AssignmentQuestion.responses))
-                  .options(joinedload(Assignment.repo).joinedload(Repo.owner))
-                  .filter(Assignment.id == assignment_id)
-                  .one())
-
-    files_hash = get_assignment_responses_hash(assignment_id)
-    if assignment.md5 == files_hash:
-        return assignment
-
+def _compute_assignment_responses(assignment, checksum=None):
+    """Update an assignment's related AssignmentQuestions, AssignmentQuestionResponses; return collated notebooks."""
     file_commits = [fc
                     for fc in (session.query(FileCommit)
                                .options(joinedload(FileCommit.repo).joinedload(Repo.owner))
@@ -177,20 +159,23 @@ def get_assignment(assignment_id):
                  for fc in file_commits
                  if fc.file_content}
 
-    student_nbs = {owner: nb for owner, nb in notebooks.items()
-                   if nb and owner != assignment.repo.owner.login}
+    student_nbs = OrderedDict(sorted(
+        ((login, nb)
+         for login, nb in notebooks.items()
+         if nb and login != assignment.repo.owner.login)))
 
-    assert assignment.repo.owner.login in notebooks, "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
+    assert assignment.repo.owner.login in notebooks, \
+        "%s: %s is not in %s" % (assignment.path, assignment.repo.owner.login, notebooks.keys())
     assignment_nb = notebooks[assignment.repo.owner.login]
 
     collator = NotebookCollator(assignment_nb, student_nbs)
-    answer_status = collator.report_missing_answers()
 
-    student_login_ids = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
-    questions = [AssignmentQuestion(assignment_id=assignment_id,
+    answer_status = collator.report_missing_answers()
+    student_login_id_map = {fc.repo.owner.login: fc.repo.owner.id for fc in file_commits}
+    questions = [AssignmentQuestion(assignment_id=assignment.id,
                                     position=position,
                                     question_name=question_name,
-                                    responses=[AssignmentQuestionResponse(user_id=student_login_ids[login],
+                                    responses=[AssignmentQuestionResponse(user_id=student_login_id_map[login],
                                                                           status=status)
                                                for login, status in d.items()])
                  for position, (question_name, d) in enumerate(answer_status)]
@@ -198,22 +183,49 @@ def get_assignment(assignment_id):
     assignment.questions = []
     session.commit()
 
-    assignment.nb_content = nbformat.writes(collator.get_collated_notebook(clear_outputs=True))
     assignment.questions = questions
-    assignment.md5 = files_hash
-
+    assignment.md5 = checksum
     session.add(assignment)
     session.commit()
 
-    return assignment
+    return {'usernames/%s' % include_usernames:
+            nbformat.writes(collator.get_collated_notebook(
+                clear_outputs=True, include_usernames=include_usernames))
+            for include_usernames in [False, True]}
 
 
-def get_combined_notebook(assignment_id):
-    assignment = get_assignment(assignment_id)
-    answer_status = [(question.question_name, {(response.user.fullname or response.user.login): response.status
-                                               for response in question.responses})
-                     for question in sorted(assignment.questions, key=lambda q: q.position)]
-    return AssignmentViewModel(assignment.path, nbformat.reads(assignment.nb_content, 4), answer_status)
+def update_assignment_responses(assignment_id, selector='assignment'):
+    """Update an assignment's related AssignmentQuestions and AssignmentQuestionResponses, and create the collations.
+
+    Return the assignment instance if selector == 'assignment' (the default).
+    Return a collated notebook if selector is a dict.
+
+    This method uses the app cache.
+    """
+    assignment = (session.query(Assignment)
+                  .options(joinedload(Assignment.questions).
+                           joinedload(AssignmentQuestion.responses))
+                  .options(joinedload(Assignment.repo).joinedload(Repo.owner))
+                  .filter(Assignment.id == assignment_id)
+                  .one())
+
+    checksum = get_assignment_response_checksum(assignment)
+
+    key_prefix = 'responses/%s/' % assignment_id
+    checksum_key = key_prefix + 'checksum'
+    selector_subkey = selector if selector == 'assignment' else 'usernames/%s' % selector['include_usernames']
+
+    if assignment.md5 == checksum and app.cache.get(checksum_key) == checksum:
+        return (assignment if selector == 'assignment'
+                else nbformat.reads(app.cache.get(key_prefix + selector_subkey), as_version=NBFORMAT_VERSION))
+
+    results = _compute_assignment_responses(assignment, checksum=checksum)
+    for k, v in results.items():
+        app.cache.set(key_prefix + k, v)
+    app.cache.set(checksum_key, checksum)  # do this last to insure integrity
+
+    return (assignment if selector == 'assignment'
+            else nbformat.reads(results[selector_subkey], as_version=NBFORMAT_VERSION))
 
 
 def get_assignment_due_date(assignment):
@@ -235,41 +247,12 @@ def get_assignment_due_date(assignment):
         return
     assignment.due_date = d
     session.commit()
+    else:
+        assignment.due_date = d
+        session.commit()
+        return d
 
 
-# TODO DRY w/ get_assignment
-def _get_collated_notebook_with_names(assignment_id):
-    assignment = get_assignment(assignment_id)
-
-    file_commits = [fc
-                    for fc in (session.query(FileCommit)
-                               .options(joinedload(FileCommit.repo))
-                               .options(joinedload(FileCommit.file_content))
-                               .options(undefer('file_content.content'))
-                               .filter(FileCommit.path == assignment.path))
-                    if fc.repo]
-
-    assignment_owner_login = assignment.repo.owner.login
-    assignment_nb = safe_read_notebook(next(fc.content.decode() for fc in file_commits if fc.repo.owner.login == assignment_owner_login))
-    assert assignment_nb
-
-    student_nbs = {(fc.repo.owner.fullname or fc.repo.owner.login): safe_read_notebook(fc.content.decode())
-                   for fc in file_commits
-                   if fc.file_content and fc.repo.owner.login != assignment_owner_login}
-
-    student_nbs = OrderedDict((username, student_nbs[username])
-                              for username in sorted(student_nbs.keys(), key=lexituples)
-                              if student_nbs[username])
-
-    collator = NotebookCollator(assignment_nb, student_nbs)
-    return collator.get_collated_notebook(clear_outputs=True, include_usernames=True)
-
-
-def get_collated_notebook_with_names(assignment_id):
-    key = 'collated_notebook/' + str(assignment_id)
-    saved_hash, result = app.cache.get(key) or (None, None)
-    current_hash = get_assignment_responses_hash(assignment_id)
-    if current_hash != saved_hash:
-        result = _get_collated_notebook_with_names(assignment_id)
-        app.cache.set(key, (current_hash, result))
-    return result
+def get_collated_notebook(assignment_id, include_usernames=False):
+    """Return the collated notebook for an assignment, updating it if necessary, and using the cache."""
+    return update_assignment_responses(assignment_id, selector={'include_usernames': include_usernames})
