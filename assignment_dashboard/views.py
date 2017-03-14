@@ -1,7 +1,6 @@
 import os
 from datetime import date, datetime
 
-import arrow
 import nbformat
 import pandas as pd
 import pytz
@@ -90,12 +89,12 @@ def assignment_repo(repo_id):
     model = get_assignment_responses(repo_id)
     assignment_repo = model.assignment_repo
 
-    oldest_update, = (session.query(Repo.refreshed_at)
-                      .filter(Repo.source_id == assignment_repo.id)
-                      .order_by(Repo.refreshed_at.asc())
-                      .first())
-    repo_update_time = arrow.get(oldest_update).to(app.config['TZ']) if oldest_update else None
-    # print('t', oldest_update, repo_update_time)
+    repo_update_time, = (session.query(Repo.refreshed_at)
+                         .filter(Repo.source_id == assignment_repo.id)
+                         .order_by(Repo.refreshed_at.asc())
+                         .first())
+    if repo_update_time:
+        repo_update_time = repo_update_time.replace(tzinfo=pytz.utc)
 
     for assgn in model.assignments:
         get_assignment_due_date(assgn)

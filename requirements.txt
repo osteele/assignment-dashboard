@@ -21,6 +21,5 @@ jupyter-client~=4.4.0
 -e git+https://github.com/olin-computing/nbcollate.git@0.1.1#egg=nbcollate-0.1.1
 
 # Misc.
-arrow~=0.10.0
 babel~=2.3.4
 pandas~=0.19.2
