@@ -1,6 +1,11 @@
 # Assignment Dashboard
 
-Assignment Dashboard is a Flask web application that displays Jupyter files within a GitHub "assignment" repository, and their status within each forked "student" repository.
+[![Updates](https://pyup.io/repos/github/olin-computing/assignment-dashboard/shield.svg)](https://pyup.io/repos/github/olin-computing/assignment-dashboard/)
+[![Python 3](https://pyup.io/repos/github/olin-computing/assignment-dashboard/python-3-shield.svg)](https://pyup.io/repos/github/olin-computing/assignment-dashboard/)
+[![Requirements Status](https://requires.io/github/olin-computing/assignment-dashboard/requirements.svg?branch=master)](https://requires.io/github/olin-computing/assignment-dashboard/requirements/?branch=master)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bc6108c6014640119f948d0d371dde9d)](https://www.codacy.com/app/steele/assignment-dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=olin-computing/assignment-dashboard&amp;utm_campaign=Badge_Grade)
+
+Assignment Dashboard is a [Flask](http://flask.pocoo.org) web application that displays [Jupyter notebook files](http://jupyter.org) within a GitHub "assignment" repository, and their status within each forked "student" repository.
 
 The app displays whether files are present in the student repository; if so, whether they have been changed, and whether they are valid Jupyter notebook files. Student repositories and files are linked to GitHub.
 
