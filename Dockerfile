@@ -4,7 +4,7 @@ MAINTAINER Oliver Steele <steele@osteele.com>
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update -y
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade 'pip~=9.0'
 
 WORKDIR /app
 COPY Aptfile /app/Aptfile
