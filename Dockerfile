@@ -15,7 +15,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . /app
-RUN pip3 install --no-cache-dir -e .
+RUN python setup.py develop
 
 # Flask requires this
 ENV FLASK_APP=assignment_dashboard
