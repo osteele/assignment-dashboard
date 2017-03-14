@@ -9,15 +9,15 @@ Assignment Dashboard is a [Flask](http://flask.pocoo.org) web application that d
 
 The app displays whether files are present in the student repository; if so, whether they have been changed, and whether they are valid Jupyter notebook files. Student repositories and files are linked to GitHub.
 
-<a href=""./docs/images/repo.jpeg"><img src="./docs/images/repo.jpeg" width="640"/></a>
+<a href="./docs/images/repo.jpeg"><img src="./docs/images/repo.jpeg" width="640"/></a>
 
 Clicking on an assignment title displays a collated notebook, with all student answers collected beneath each prompt.
 
-<a href=""./docs/images/collated.jpeg"><img src="./docs/images/collated.jpeg" width="320"/></a>
+<a href="./docs/images/collated.jpeg"><img src="./docs/images/collated.jpeg" width="320"/></a>
 
 The app also displays additional information about each assignment.
 
-<a href=""./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="320"/></a>
+<a href="./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="320"/></a>
 
 ## Status
 
