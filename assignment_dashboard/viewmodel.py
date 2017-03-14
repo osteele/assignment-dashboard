@@ -6,6 +6,7 @@ import hashlib
 import pickle
 import re
 from collections import OrderedDict, namedtuple
+from itertools import takewhile
 
 import dateutil.parser
 import nbformat
@@ -229,6 +230,10 @@ def update_assignment_responses(assignment_id, selector='assignment'):
 
 
 def get_assignment_due_date(assignment):
+    """Return an assignment's due date.
+
+    If this is not present in the database, try to read it from the first few markdown cells.
+    """
     if assignment.due_date:
         return assignment.due_date
 
@@ -236,17 +241,26 @@ def get_assignment_due_date(assignment):
     if not nb or not nb.cells:
         return
 
-    m = re.search('Due:?(.+)', nb.cells[0].source, re.I)
+    m = next((re.search('Due:?\s*(.+)', nb.cells[0].source, re.I)
+              for cell in takewhile(lambda c: c.cell_type == 'markdown', nb.cells[:5])),
+             None)
     if not m:
         return
 
-    s = re.sub(r'(12(:00)?)? ?noon', '12:00PM', m.group(0))
+    # prepare the date for dateutil.parse, which doesn't know "noon"
+    s = m.group(1)
+    s = re.sub(r'(12(:00)?)? ?noon', '12:00PM', s)
+    s = re.sub(r'~~.*?~~', '', s)
+    s = re.sub(r'\*', '', s)
+    # TODO parse relative to assignment year
+    # TODO parse relative to timezone
+    # from datetime import datetime
+    # default_dt = datetime(2016, 1, 1, 12, 0)
     try:
         d = dateutil.parser.parse(s, fuzzy=True)
+        print(d)
     except ValueError:
         return
-    assignment.due_date = d
-    session.commit()
     else:
         assignment.due_date = d
         session.commit()
