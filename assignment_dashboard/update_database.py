@@ -31,10 +31,10 @@ gh = Github(GITHUB_API_TOKEN)
 RepoCommitFile = namedtuple('RepoCommitItem', 'commit file')
 
 
-def unique_by(iter):
-    """Return a list of items with distinct keys. iter yields (item, key)."""
+def unique_by(pairs):
+    """Return a list of items with distinct keys. pairs yields (item, key)."""
     # return a list rather than a set, because items might not be hashable
-    return list({key: item for item, key in iter}.values())
+    return list({key: item for item, key in pairs}.values())
 
 
 def get_file_content(repo, blob_url):

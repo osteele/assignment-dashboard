@@ -1,8 +1,8 @@
-FROM assignment-dashboard
+FROM assignment-dashboard:latest
 
 MAINTAINER Oliver Steele <steele@osteele.com>
 
-RUN apt-get install -y cron
+RUN apt-get install -y --no-install-recommends cron
 
 COPY cron-updatedb /etc/cron.d/
 RUN chmod 0644 /etc/cron.d/cron-updatedb

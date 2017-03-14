@@ -8,7 +8,7 @@ RUN pip3 install --upgrade pip
 
 WORKDIR /app
 COPY Aptfile /app/Aptfile
-RUN egrep -v '#|^$' /app/Aptfile | xargs apt-get -y --force-yes install
+RUN egrep -v '#|^$' /app/Aptfile | xargs apt-get -y --force-yes --no-install-recommends install
 
 # provide cached layer for requirements, beneath rest of sources
 COPY requirements.txt /app/requirements.txt

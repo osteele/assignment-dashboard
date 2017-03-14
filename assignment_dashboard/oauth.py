@@ -57,16 +57,6 @@ def authorized(access_token):
     return redirect(next_url)
 
 
-@app.route('/debug/user')
-def user():
-    return str(g.user.login)
-    return repr(User.query.get(login=session['gh_login']))
-    return str(session['gh_login'])
-    from github import Github
-    gh = Github(session['access_token'])
-    return str(gh.get_user().login)
-
-
 @app.route('/debug/teams')
 def teams():
     gh = Github(session['access_token'])
