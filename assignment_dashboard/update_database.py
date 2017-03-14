@@ -7,7 +7,7 @@ import os
 from collections import namedtuple
 from datetime import datetime, timedelta
 
-import arrow
+import dateutil
 from github import Github
 
 from .database import session
@@ -17,7 +17,6 @@ from .sql_alchemy_helpers import find_or_create, update_instance, upsert_all
 # globals
 #
 
-COMMIT_LIMIT = int(os.environ.get('COMMIT_LIMIT', 0))
 REPROCESS_COMMITS = os.environ.get('REPROCESS_COMMITS', 'False') not in ('False', '0')
 
 # TODO use user token associated with assignment repo
@@ -50,7 +49,7 @@ def is_downloadable_path(path):
 
 
 def parse_git_datetime(s):
-    return arrow.get(s, 'ddd, DD MMM YYYY HH:mm:ss ZZZ').datetime
+    return dateutil.parser.parse(s)
 
 
 def own_commit(repo, commit):
@@ -164,15 +163,15 @@ def get_repo_db_instance(gh_repo):
     return instance
 
 
-def get_new_repo_commits(repo, commit_limit=None):
+def get_new_repo_commits(repo, commit_limit=None, reprocess_commits=False):
     repo_instance = get_repo_db_instance(repo)
 
-    saved_commits = set() if REPROCESS_COMMITS else get_repo_instance(repo).commits
+    saved_commits = set() if reprocess_commits else get_repo_instance(repo).commits
     saved_commit_shas = {commit.sha for commit in saved_commits}
 
     def get_commit_kwargs(repo):
         since = None
-        if REPROCESS_COMMITS:
+        if reprocess_commits:
             pass
         elif repo_instance.refreshed_at:
             since = repo_instance.refreshed_at + timedelta(days=-1)
@@ -288,9 +287,9 @@ def record_repo_commits(repo, repo_commits, timestamp):
     session.commit()
 
 
-def update_repo_files(repo, all_commits=False, commit_limit=None):
+def update_repo_files(repo, all_commits=False, commit_limit=None, reprocess_commits=False):
     timestamp = datetime.utcnow()
-    repo_commits = get_new_repo_commits(repo, commit_limit=COMMIT_LIMIT)
+    repo_commits = get_new_repo_commits(repo, commit_limit=commit_limit, reprocess_commits=reprocess_commits)
     file_commit_recs = get_file_commit_recs(repo, repo_commits, all_commits=all_commits)
     if repo_commits:
         download_files(repo, repo_commits, file_commit_recs)
@@ -333,4 +332,8 @@ def update_db(source_repo_name, options={}):
 
     for i, repo in enumerate(repos):
         print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
-        update_repo_files(repo, all_commits=(repo == source_repo), commit_limit=COMMIT_LIMIT)
+        update_repo_files(repo,
+                          all_commits=(repo == source_repo),
+                          commit_limit=options.get('commit_limit'),
+                          reprocess_commits=options.get('reprocess_commits')
+                          )

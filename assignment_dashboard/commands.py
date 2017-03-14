@@ -10,6 +10,7 @@ from . import app
 from .database import db, session
 from .model_helpers import update_names_from_csv
 from .models import Assignment, Repo, User
+from .update_database import add_repo, update_db
 
 
 def assert_github_token():
@@ -35,7 +36,6 @@ def initdb():
 def add_repo(repo_name):
     """Add a repository to the database."""
     assert_github_token()
-    from .update_database import add_repo  # noqa: F401
     add_repo(repo_name)
 
 
@@ -58,13 +58,7 @@ def updatedb(**options):
         print("Run add_repo to add an assignment repository.")
         sys.exit(1)
 
-    # TODO modify update_database() to take options. currently the module reads environs
-    for k, v in options.items():
-        if v is not None:
-            os.environ[k.upper()] = str(v)
-
     # do the import after the environs have been set
-    from .update_database import update_db  # noqa: F401
     if options['users']:
         options['users'] = list(filter(None, options['users'].split(',')))
     for repo in repos:
