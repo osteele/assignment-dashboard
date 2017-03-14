@@ -252,12 +252,9 @@ def get_assignment_due_date(assignment):
     s = re.sub(r'(12(:00)?)? ?noon', '12:00PM', s)
     s = re.sub(r'~~.*?~~', '', s)
     s = re.sub(r'\*', '', s)
-    # TODO parse relative to assignment year
     # TODO parse relative to timezone
-    # from datetime import datetime
-    # default_dt = datetime(2016, 1, 1, 12, 0)
     try:
-        d = dateutil.parser.parse(s, fuzzy=True)
+        d = dateutil.parser.parse(s, fuzzy=True, default=assignment.file.mod_time)
         print(d)
     except ValueError:
         return

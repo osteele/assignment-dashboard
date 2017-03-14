@@ -163,14 +163,17 @@ class Assignment(Base):
     #                     foreign_keys=[repo_id, path])
 
     @property
-    def content(self):
+    def file(self):
         # TODO get `file` relationship above working; replace this query by
         # that
         return (self.query.session.query(FileCommit)
                 .filter(FileCommit.repo_id == self.repo_id)
                 .filter(FileCommit.path == self.path)
-                .one()
-                .content)
+                .one())
+
+    @property
+    def content(self):
+        return self.file.content
 
     @property
     def notebook(self):
