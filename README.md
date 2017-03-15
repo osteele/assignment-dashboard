@@ -17,7 +17,7 @@ Clicking on an assignment title displays a collated notebook, with all student a
 
 The app also displays additional information about each assignment.
 
-<a href="./docs/images/answer-table><img src="./docs/images/answer-table.jpeg" width="320"/></a>
+<a href="./docs/images/answer-table"><img src="./docs/images/answer-table.jpeg" width="320"/></a>
 
 ## Status
 
