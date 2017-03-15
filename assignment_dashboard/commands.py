@@ -3,6 +3,7 @@ import sys
 
 import click
 
+import update_database
 from alembic import command
 from alembic.config import Config
 
@@ -10,7 +11,6 @@ from . import app
 from .database import db, session
 from .model_helpers import update_names_from_csv
 from .models import Assignment, Repo, User
-from .update_database import add_repo, update_db
 
 
 def assert_github_token():
@@ -36,7 +36,7 @@ def initdb():
 def add_repo(repo_name):
     """Add a repository to the database."""
     assert_github_token()
-    add_repo(repo_name)
+    update_database.epo(repo_name)
 
 
 @app.cli.command()
@@ -63,7 +63,7 @@ def updatedb(**options):
         options['users'] = list(filter(None, options['users'].split(',')))
     for repo in repos:
         print("Updating %s" % repo.full_name)
-        update_db(repo.full_name, options)
+        update_database.update_db(repo.full_name, options)
 
 
 @app.cli.command()
