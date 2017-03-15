@@ -31,6 +31,12 @@ def initdb():
 
 
 @app.cli.command()
+def clear_cache():
+    """Clear caches."""
+    app.cache.clear()
+
+
+@app.cli.command()
 @click.argument('repo_name')
 def add_repo(repo_name):
     """Add a repository to the database."""
