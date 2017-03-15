@@ -1,7 +1,6 @@
 # Assignment Dashboard
 
 [![Updates](https://pyup.io/repos/github/olin-computing/assignment-dashboard/shield.svg)](https://pyup.io/repos/github/olin-computing/assignment-dashboard/)
-[![Python 3](https://pyup.io/repos/github/olin-computing/assignment-dashboard/python-3-shield.svg)](https://pyup.io/repos/github/olin-computing/assignment-dashboard/)
 [![Requirements Status](https://requires.io/github/olin-computing/assignment-dashboard/requirements.svg?branch=master)](https://requires.io/github/olin-computing/assignment-dashboard/requirements/?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/bc6108c6014640119f948d0d371dde9d)](https://www.codacy.com/app/steele/assignment-dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=olin-computing/assignment-dashboard&amp;utm_campaign=Badge_Grade)
 
