@@ -3,11 +3,10 @@ import sys
 
 import click
 
-import update_database
 from alembic import command
 from alembic.config import Config
 
-from . import app
+from . import app, update_database
 from .database import db, session
 from .model_helpers import update_names_from_csv
 from .models import Assignment, Repo, User
