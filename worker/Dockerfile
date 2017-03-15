@@ -1,4 +1,4 @@
-FROM assignment-dashboard:latest
+FROM assignment-dashboard
 
 MAINTAINER Oliver Steele <steele@osteele.com>
 
