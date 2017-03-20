@@ -13,7 +13,7 @@ from .database import session
 from .decorators import login_required, requires_access
 from .globals import NBFORMAT_VERSION, PYNB_MIME_TYPE
 from .model_helpers import InvalidInput, update_names_from_csv
-from .models import Repo
+from .models import Repo, Assignment
 from .viewmodel import (find_assignment, get_assignment_due_date, get_assignment_responses, get_collated_notebook,
                         get_source_repos, update_assignment_responses)
 
@@ -168,7 +168,8 @@ def collated_assignment_with_names(assignment_id):
 @app.route('/assignment/<int:assignment_id>/collated.ipynb')
 @requires_access('assignment')
 def download_collated_assignment(assignment_id):
-    filename = '%s-combined%s' % os.path.splitext(os.path.basename(model.assignment_path))
+    assignment = Assignment.query.get(assignment_id)
+    filename = '%s-collation%s' % os.path.splitext(os.path.basename(assignment.path))
     nb = get_collated_notebook(assignment_id, include_usernames=False)
 
     response = make_response(nbformat.writes(nb))
