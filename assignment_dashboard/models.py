@@ -30,6 +30,8 @@ def base__repr__(self):
         ', '.join("%s=%s" % (k, format_value(v))
                   for k, v in attrs.items()
                   if v and short_enough(v)))
+
+
 Base.__repr__ = base__repr__
 
 
@@ -62,6 +64,7 @@ class FileContent(Base):
     sha = Column(String(40), SHA_HASH_CONSTRAINT, nullable=False, index=True, unique=True)
     content_type = Column(String(40), nullable=True)
     content = deferred(Column(Text, nullable=True))
+
 
 organization_users_table = Table(
     'organization_users', Base.metadata, Column('organization_id', ForeignKey('user.id'), primary_key=True),
