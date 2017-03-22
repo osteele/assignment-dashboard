@@ -2,7 +2,6 @@ import os
 import sys
 
 import click
-
 from alembic import command
 from alembic.config import Config
 
@@ -15,9 +14,9 @@ from .models import Assignment, Repo, User
 def assert_github_token():
     token_name = 'GITHUB_API_TOKEN'
     if token_name not in os.environ:
-        print("Error: %s isn't set." % token_name, file=sys.stderr)
-        print("Visit https://github.com/settings/tokens/new to create a GitHub personal access token", file=sys.stderr)
-        print("and set the %s environment variable to it." % token_name, file=sys.stderr)
+        sys.stderr.write("Error: %s isn't set.\n" % token_name)
+        sys.stderr.write("Visit https://github.com/settings/tokens/new to create a GitHub personal access token\n")
+        sys.stderr.write("and set the %s environment variable to it.\n" % token_name)
         sys.exit(1)
 
 
@@ -57,10 +56,14 @@ def updatedb(**options):
     command.upgrade(alembic_cfg, "head")
 
     assert_github_token()
-    repos = session.query(Repo).filter(Repo.source_id.is_(None)).all()
+    repos = (session.query(Repo)
+             .filter(Repo.source_id.is_(None))
+             .filter(Repo.is_active.is_(True))
+             .all())
+
     if not repos:
-        print("Error: REPO_NAME not specified")
-        print("Run add_repo to add an assignment repository.")
+        sys.stderr.write("Error: REPO_NAME not specified\n")
+        sys.stderr.write("Run add_repo to add an assignment repository.\n")
         sys.exit(1)
 
     # do the import after the environs have been set
@@ -94,7 +97,7 @@ def set_fake_usernames(clear):
     try:
         from faker import Faker
     except ModuleNotFoundError as e:
-        print("%s: pip install Faker" % e, file=sys.stderr)
+        sys.stderr.write("%s: pip install Faker\n" % e)
         sys.exit(1)
     fake = Faker()
     for user in session.query(User).filter(User.role == 'student').all():

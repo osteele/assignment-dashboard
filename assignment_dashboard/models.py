@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import (CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text,
+from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text,
                         UniqueConstraint)
 from sqlalchemy.orm import backref, deferred, relationship
 
@@ -109,6 +109,7 @@ class Repo(Base):
     owner_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     source_id = Column(Integer, ForeignKey('repo.id'), nullable=True)
     name = Column(String(100), nullable=False)
+    is_active = Column(Boolean, nullable=False, server_default='1')
     refreshed_at = Column(DateTime)
 
     source = relationship('Repo', remote_side=[id])
