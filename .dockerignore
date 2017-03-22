@@ -1,11 +1,13 @@
 *.egg-info
+_config.yml
 .env
 .git
 config/production.env
 data
-Dockerfile*
 docker-compose*.yml
+Dockerfile*
 docs
+log
 nginx
 src
 tests
