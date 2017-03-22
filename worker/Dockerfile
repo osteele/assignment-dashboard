@@ -16,5 +16,7 @@ COPY updatedb /worker
 
 RUN touch /var/log/updatedb.log
 
+HEALTHCHECK NONE
+
 ENTRYPOINT ["/bin/bash"]
 CMD ["-c", "env > /worker/.env && cron && tail -f /var/log/updatedb.log"]
