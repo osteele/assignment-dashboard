@@ -8,6 +8,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 
 import dateutil
+
 from github import Github
 
 from .database import session
@@ -143,7 +144,10 @@ def save_repos(source_repo, repos):
     session.commit()
     assert source_repo_instance.id
 
-    repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id, name=repo.name, source_id=source_repo_instance.id)
+    repo_instances = [Repo(owner_id=user_instance_map[repo.owner.login].id,
+                           name=repo.name,
+                           source_id=source_repo_instance.id,
+                           is_active=True)
                       for repo in repos
                       if repo != source_repo]
     upsert_all(session, [source_repo_instance] + repo_instances, Repo.owner_id, Repo.name)
@@ -278,6 +282,7 @@ def update_file_commits(repo, file_commit_recs):
 def record_repo_commits(repo, repo_commits, timestamp):
     repo_instance = get_repo_db_instance(repo)
     repo_instance.refreshed_at = timestamp
+    session.commit()
 
     commit_instances = [Commit(repo_id=get_repo_instance(repo).id,
                                sha=commit.sha,
@@ -307,33 +312,35 @@ def add_repo(repo_name):
 
 
 def update_db(source_repo_name, options={}):
-    source_repo = gh.get_repo(source_repo_name)
+    gh_source_repo = gh.get_repo(source_repo_name)
 
     if options.get('update_users'):
-        save_users([source_repo.owner], role='organization')
-        update_instructor_logins(source_repo)
+        save_users([gh_source_repo.owner], role='organization')
+        update_instructor_logins(gh_source_repo)
 
-    repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
-    forks = get_forks(source_repo)
+    # repo = session.query(Repo).filter(Repo.source_id.is_(None)).all()
+    gh_forks = get_forks(gh_source_repo)
     if options.get('update_users'):
-        save_users([repo.owner for repo in forks], role='student')
+        save_users([gh_repo.owner for gh_repo in gh_forks], role='student')
 
-    forks = sorted(forks, key=lambda r: r.owner.login)
+    gh_forks = sorted(gh_forks, key=lambda r: r.owner.login)
     if options.get('update_users'):
-        save_repos(source_repo, forks)
+        save_repos(gh_source_repo, gh_forks)
 
-    repos = [source_repo] + forks
+    gh_repos = [gh_source_repo] + gh_forks
     if options.get('users'):
-        repos = [repo for repo in repos if repo.owner.login in options['users']]
+        gh_repos = [gh_repo for gh_repo in gh_repos if gh_repo.owner.login in options['users']]
     if options.get('oldest_first'):
-        repos = sorted(repos, key=lambda r: r.updated_at or datetime(1972, 1, 1))
+        repo_instances = {r.full_name: r for r in get_repo_db_instance(gh_source_repo).forks}
+        gh_repos = sorted(gh_repos,
+                       key=lambda r: getattr(repo_instances.get(r.full_name), 'refreshed_at', None) or datetime(1972, 1, 1))
     if options.get('repo_limit'):
-        repos = repos[:options['repo_limit']]
+        gh_repos = gh_repos[:options['repo_limit']]
 
-    for i, repo in enumerate(repos):
-        print("Updating %s (%d/%d)" % (repo.full_name, i + 1, len(repos)))
-        update_repo_files(repo,
-                          all_commits=(repo == source_repo),
+    for i, gh_repo in enumerate(gh_repos):
+        print("Updating %s (%d/%d)" % (gh_repo.full_name, i + 1, len(gh_repos)))
+        update_repo_files(gh_repo,
+                          all_commits=(gh_repo == gh_source_repo),
                           commit_limit=options.get('commit_limit'),
                           reprocess_commits=options.get('reprocess_commits')
                           )
