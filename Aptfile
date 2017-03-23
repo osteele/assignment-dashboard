@@ -6,5 +6,8 @@ build-essential
 git-core
 sqlite3
 libsqlite3-dev
-postgresql-client
+# postgresql-client
 libpq-dev
+
+# worker
+cron
