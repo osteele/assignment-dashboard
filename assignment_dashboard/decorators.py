@@ -8,6 +8,7 @@ from .viewmodel import get_source_repos
 
 
 def login_required(f):
+    """A view function decorator that requires the user is logged in."""
     if not app.config['REQUIRE_LOGIN']:
         return f
 
@@ -20,6 +21,11 @@ def login_required(f):
 
 
 def requires_access(model_name):
+    """A view function decorator that guards access to a model.
+
+    The function should take a keyword argument named model_name + "_id",
+    whose value is database id of the model.
+    """
     def wrapper(f):
         if not app.config['REQUIRE_LOGIN']:
             return f
@@ -37,6 +43,12 @@ def requires_access(model_name):
 
 
 def user_has_access(user, model_name, object_id):
+    """Return True iff user has access to instance of model_name.
+
+    model_name is hardcoded to one of 'assignment' or 'repo'.
+
+    This function is used as a helper for requires_access.
+    """
     if model_name == 'assignment':
         assignment = Assignment.query.get(object_id)
         model_name, object_id = 'repo', assignment.repo_id

@@ -1,5 +1,5 @@
 """"
-"Implements the View-Model of an MVVM architecture.
+Implements the View-Model of an MVVM architecture.
 """
 
 import hashlib
