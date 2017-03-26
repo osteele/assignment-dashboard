@@ -1,14 +1,12 @@
-"""
-Update the database from GitHub.
-"""
+"""Update the database from GitHub."""
 
 import base64
 import os
 from collections import namedtuple
 from datetime import datetime, timedelta
+from typing import Iterable, List
 
 import dateutil
-
 from github import Github
 
 from .database import session
@@ -31,7 +29,7 @@ gh = Github(GITHUB_API_TOKEN)
 RepoCommitFile = namedtuple('RepoCommitItem', 'commit file')
 
 
-def unique_by(pairs):
+def unique_by(pairs: Iterable[tuple]) -> List:
     """Return a list of items with distinct keys. pairs yields (item, key)."""
     # return a list rather than a set, because items might not be hashable
     return list({key: item for item, key in pairs}.values())
@@ -49,7 +47,7 @@ def is_downloadable_path(path):
     return any(path.endswith(suffix) for suffix in ['.ipynb', '.py', '.md', '.txt'])
 
 
-def parse_git_datetime(s):
+def parse_git_datetime(s: str) -> datetime:
     return dateutil.parser.parse(s)
 
 
@@ -91,14 +89,14 @@ def get_forks(source_repo):
 user_instance_map = {}
 
 
-def save_users(users, role='student'):
+def save_users(users: List, role='student'):
     print("Updating %ss in database" % role)
     saved_instances = {instance.login: instance
                        for instance in session.query(User).filter(User.login.in_(user.login for user in users))}
     for user in users:
         attrs = dict(
             login=user.login,
-            avatar_url=user.avatar_url or repo.owner.gravatar_url,
+            avatar_url=user.avatar_url,
             gh_type=user.type,
             role=role,
             **dict(fullname=user.name) if user.name else {},
@@ -302,7 +300,7 @@ def update_repo_files(repo, all_commits=False, commit_limit=None, reprocess_comm
     record_repo_commits(repo, repo_commits, timestamp)
 
 
-def add_repo(repo_name):
+def add_repo(repo_name: str):
     owner_login, shortname = repo_name.split('/')
     owner = find_or_create(session, User, login=owner_login)
     instance = find_or_create(session, Repo, owner_id=owner.id, name=shortname)
@@ -311,7 +309,7 @@ def add_repo(repo_name):
     update_db(repo_name)
 
 
-def update_db(source_repo_name, options={}):
+def update_db(source_repo_name: str, options={}):
     gh_source_repo = gh.get_repo(source_repo_name)
 
     if options.get('update_users'):
@@ -333,7 +331,7 @@ def update_db(source_repo_name, options={}):
     if options.get('oldest_first'):
         repo_instances = {r.full_name: r for r in get_repo_db_instance(gh_source_repo).forks}
         gh_repos = sorted(gh_repos,
-                       key=lambda r: getattr(repo_instances.get(r.full_name), 'refreshed_at', None) or datetime(1972, 1, 1))
+                          key=lambda r: getattr(repo_instances.get(r.full_name), 'refreshed_at', None) or datetime(1972, 1, 1))
     if options.get('repo_limit'):
         gh_repos = gh_repos[:options['repo_limit']]
 

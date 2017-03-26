@@ -8,12 +8,12 @@ from .models import User
 
 
 class InvalidInput(Exception):
-    def __init__(self, message):
+    def __init__(self, message: str):
         self.message = message
 
 
-def update_names_from_csv(csv):
-    df = pd.DataFrame.from_csv(csv, index_col=None)
+def update_names_from_csv(csv_path):
+    df = pd.DataFrame.from_csv(csv_path, index_col=None)
     name_col = next((col for col in df.columns if re.match(r'(user ?)?names?', col, re.I)), None)
     github_col = next((col for col in df.columns if re.search(r'git', col, re.I)), None)
 

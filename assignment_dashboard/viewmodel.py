@@ -7,6 +7,7 @@ import pickle
 import re
 from collections import OrderedDict, namedtuple
 from itertools import takewhile
+from typing import List, Mapping
 
 import dateutil.parser
 import nbformat
@@ -26,7 +27,7 @@ StudentViewModel = namedtuple('StudentViewModel', 'user repo display_name')
 AssignmentResponseViewModel = namedtuple('AssignmentResponseViewModel', 'assignment_repo assignments students responses')
 
 
-def get_source_repos(user=None):
+def get_source_repos(user=None) -> List:
     if not user:
         return session.query(Repo).options(joinedload(Repo.owner)).filter(Repo.source_id.is_(None)).all()
     # PERF replace this by a single query
@@ -49,7 +50,7 @@ def update_content_types(file_contents):
                 fc.content_type = ''
 
 
-def compute_assignment_name(path):
+def compute_assignment_name(path: str) -> str:
     NOTEBOOK_ASSIGNMENT_PATH_RE = r'day(\d+)_reading_journal\.ipynb'
     NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE = r'Journal #\1'
     return re.sub(NOTEBOOK_ASSIGNMENT_PATH_RE, NOTEBOOK_ASSIGNMENT_PATH_TITLE_TEMPLATE, path)
@@ -68,7 +69,7 @@ def update_assignment_file_list(assignment_repo, assignment_paths):
     session.commit()
 
 
-def get_assignment_responses(repo_id):
+def get_assignment_responses(repo_id: int) -> AssignmentResponseViewModel:
     """Update the repo.assignments from its list of files."""
     assignment_repo = (session.query(Repo)
                        .options(joinedload(Repo.assignments).
@@ -131,7 +132,7 @@ def get_assignment_responses(repo_id):
         responses)
 
 
-def find_assignment(assignment_id):
+def find_assignment(assignment_id: int) -> Assignment:
     """Return an Assignment.
 
     The associated repo and repo owner are eagerly loaded.
@@ -139,14 +140,14 @@ def find_assignment(assignment_id):
     return session.query(Assignment).options(joinedload(Assignment.repo)).filter(Assignment.id == assignment_id).one()
 
 
-def get_assignment_response_checksum(assignment):
+def get_assignment_response_checksum(assignment: Assignment) -> str:
     """Return a constant that detects whether the set or contents of response files changes."""
     # FIXME restrict to forks of the assignment repo
     files = session.query(FileCommit).filter(FileCommit.path == assignment.path)
     return hashlib.md5(pickle.dumps(sorted(fc.sha for fc in files))).hexdigest()
 
 
-def _compute_assignment_responses(assignment, checksum=None):
+def _compute_assignment_responses(assignment: Assignment, checksum=None) -> Mapping:
     """Update an assignment's related AssignmentQuestions, AssignmentQuestionResponses; return collated notebooks."""
     file_commits = [fc
                     for fc in (session.query(FileCommit)
@@ -195,7 +196,7 @@ def _compute_assignment_responses(assignment, checksum=None):
             for include_usernames in [False, True]}
 
 
-def update_assignment_responses(assignment_id, selector='assignment'):
+def update_assignment_responses(assignment_id: int, selector='assignment'):
     """Update an assignment's related AssignmentQuestions and AssignmentQuestionResponses, and create the collations.
 
     Return the assignment instance if selector == 'assignment' (the default).
@@ -229,7 +230,7 @@ def update_assignment_responses(assignment_id, selector='assignment'):
             else nbformat.reads(results[selector_subkey], as_version=NBFORMAT_VERSION))
 
 
-def get_assignment_due_date(assignment):
+def get_assignment_due_date(assignment: Assignment):
     """Return an assignment's due date.
 
     If this is not present in the database, try to read it from the first few markdown cells.
@@ -264,6 +265,6 @@ def get_assignment_due_date(assignment):
         return d
 
 
-def get_collated_notebook(assignment_id, include_usernames=False):
+def get_collated_notebook(assignment_id: int, include_usernames=False):
     """Return the collated notebook for an assignment, updating it if necessary, and using the cache."""
     return update_assignment_responses(assignment_id, selector={'include_usernames': include_usernames})

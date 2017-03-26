@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import Callable
 
 from flask import abort, g, redirect, request, url_for
 
@@ -7,7 +8,7 @@ from .models import Assignment
 from .viewmodel import get_source_repos
 
 
-def login_required(f):
+def login_required(f: Callable):
     """A view function decorator that requires the user is logged in."""
     if not app.config['REQUIRE_LOGIN']:
         return f
@@ -20,11 +21,12 @@ def login_required(f):
     return decorated_function
 
 
-def requires_access(model_name):
+def requires_access(model_name: str):
     """A view function decorator that guards access to a model.
 
-    The function should take a keyword argument named model_name + "_id",
-    whose value is database id of the model.
+    Args:
+        model_name: The decorated function should take a keyword argument named `model_name` + "_id",
+            whose value is database id of the model.
     """
     def wrapper(f):
         if not app.config['REQUIRE_LOGIN']:
@@ -42,12 +44,17 @@ def requires_access(model_name):
     return wrapper
 
 
-def user_has_access(user, model_name, object_id):
-    """Return True iff user has access to instance of model_name.
+def user_has_access(user, model_name: str, object_id: int) -> bool:
+    """Determine whether user has access to the specified instance of model_name.
 
-    model_name is hardcoded to one of 'assignment' or 'repo'.
+    Arguments:
+        model_name: hardcoded to one of 'assignment' or 'repo'
 
-    This function is used as a helper for requires_access.
+    Returns:
+        Return True iff user has access to instance of model_name
+
+    Note:
+        This function is used as a helper for `requires_access`on
     """
     if model_name == 'assignment':
         assignment = Assignment.query.get(object_id)
