@@ -2,7 +2,7 @@
 import os
 import re
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 GIT_DEPENDENCY_RE = r'^(?:git\+)(.+)\.git@(.+?)(#egg=(.+)-(.+))'
 requirements_txt = open(os.path.join(os.path.dirname(__file__), 'requirements.txt')).read()
@@ -11,7 +11,7 @@ install_requires = [re.sub(GIT_DEPENDENCY_RE, r'\4==\5', r) for r in requirement
 dependency_links = [re.sub(GIT_DEPENDENCY_RE, r'\1/archive/\2.tar.gz\3', r) for r in requirements if re.match(GIT_DEPENDENCY_RE, r)]
 
 setup(name='assignment_dashboard',
-      packages=['assignment_dashboard'],
+      packages=find_packages(),
       include_package_data=True,
       version='0.1',
       description="A web app that inspects forks of an GitHub assignment repo",
