@@ -21,4 +21,4 @@ class BaseConfig(object):
         REQUIRE_LOGIN = False
 
     if 'REDIS_HOST' in os.environ:
-        REDIS_HOST = os.environ.get('REDIS_HOST')
+        REDIS_HOST = os.environ['REDIS_HOST']
