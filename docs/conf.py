@@ -21,6 +21,9 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import os
+import sys
+
 from recommonmark.parser import CommonMarkParser
 
 try:
@@ -28,9 +31,13 @@ try:
 except ImportError:
     sphinx_rtd_theme = None
 
+sys.path.insert(0, os.path.abspath('..'))
+
 source_parsers = {
     '.md': CommonMarkParser,
 }
+
+default_role = 'any'
 
 
 # -- General configuration ------------------------------------------------
@@ -42,7 +49,7 @@ source_parsers = {
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

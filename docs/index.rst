@@ -10,6 +10,16 @@ GitHub Assignment Dashboard
    :maxdepth: 2
    :caption: Contents:
 
+   install-without-docker
+
+
+Reference
+=========
+
+.. toctree::
+   :maxdepth: 2
+
+   source/assignment_dashboard
 
 
 Indices and tables
