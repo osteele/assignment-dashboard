@@ -11,7 +11,7 @@ Flask-SQLAlchemy~=2.1
 psycopg2~=2.7
 
 # Resources
-redis~=2.10.5
+redis==2.10.6
 
 # Services
 PyGithub~=1.29
