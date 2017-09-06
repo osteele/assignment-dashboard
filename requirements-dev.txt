@@ -9,4 +9,4 @@ recommonmark~=0.4.0
 # lint
 flake8~=2.5.5
 flake8-docstrings~=1.0.3
-hacking~=0.13.0
+hacking==1.0.0
