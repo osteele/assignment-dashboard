@@ -7,7 +7,7 @@ Flask-DebugToolbar~=0.10.1
 
 # SQL
 sqlalchemy~=1.1.5
-Flask-SQLAlchemy~=2.1
+Flask-SQLAlchemy==2.3.0
 psycopg2~=2.7
 
 # Resources
