@@ -17,7 +17,7 @@ redis~=2.10.5
 PyGithub~=1.29
 
 # Notebooks
-jupyter-client~=5.0
+jupyter-client==5.2.1
 -e git+https://github.com/olin-computing/nbcollate.git@0.1.1#egg=nbcollate-0.1.1
 
 # Misc.
