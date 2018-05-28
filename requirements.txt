@@ -6,7 +6,7 @@ Jinja2~=2.8
 Flask-DebugToolbar~=0.10.1
 
 # SQL
-sqlalchemy~=1.1.5
+sqlalchemy==1.2.8
 Flask-SQLAlchemy~=2.1
 psycopg2~=2.7
 
